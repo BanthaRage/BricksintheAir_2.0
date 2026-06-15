@@ -26,12 +26,12 @@ python simulation/main.py
 python simulation/gui.py
 ```
 
-### Orange Pi 4 Pro — Terminal with live GPIO
+### Raspberry Pi 5 — Terminal with live GPIO
 ```bash
 python simulation/opi_main.py
 ```
 
-### Orange Pi 4 Pro — GUI with live GPIO
+### Raspberry Pi 5 — GUI with live GPIO
 ```bash
 python simulation/opi_main.py --gui
 ```
@@ -119,17 +119,20 @@ The Automatic Fog Suppression System is controlled via the FCC `POP_SMOKE` comma
 
 ---
 
-## GPIO Pin Map (Orange Pi 4 Pro — BOARD numbering)
+## GPIO Pin Map (Raspberry Pi 5 — BCM numbering)
 
-All five outputs use hardware PWM on the PD bank (PWM0 controller, ~1000 Hz).
+All five outputs use software PWM via lgpio at 1000 Hz.
+GPIO12 and GPIO13 are also hardware PWM-capable pins if a kernel overlay is needed.
 
-| Physical Pin | GPIO | PWM Channel | Function | Component |
-|-------------|------|-------------|----------|-----------|
-| 29 | PD0 | PWM0_0 | Propeller speed | MOSFET → PF Motor |
-| 30 | PD5 | PWM0_5 | AFSS pump | MOSFET → DFRobot FIT0801 |
-| 33 | PD2 | PWM0_2 | Gear UP | DRV8833 IN1 |
-| 35 | PD3 | PWM0_3 | Gear DOWN | DRV8833 IN2 |
-| 37 | PD4 | PWM0_4 | AFSS coil | MOSFET → Halo Triton II |
+| Board Pin | BCM GPIO | Function | Component |
+|-----------|---------|----------|-----------|
+| 32 | GPIO12 | Propeller speed | MOSFET → PF Motor |
+| 33 | GPIO13 | AFSS pump | MOSFET → DFRobot FIT0801 |
+| 36 | GPIO16 | Gear UP | DRV8833 IN1 |
+| 38 | GPIO20 | Gear DOWN | DRV8833 IN2 |
+| 40 | GPIO21 | AFSS coil | MOSFET → Halo Triton II |
+
+Verify with `gpioinfo` before first power-on.
 
 ---
 
@@ -137,12 +140,15 @@ All five outputs use hardware PWM on the PD bank (PWM0 controller, ~1000 Hz).
 
 | File | Purpose |
 |------|---------|
-| `devices.py` | I2C device state machines (FCC, ECU, GEAR) and bus router |
-| `main.py` | Terminal REPL — simulation only |
-| `gui.py` | tkinter GUI — simulation only |
-| `gpio_driver.py` | Orange Pi hardware abstraction — wiringOP PWM, fog sequencer |
-| `gpio_bridge.py` | Watches device state changes and calls GPIO driver |
-| `opi_main.py` | Entry point for Orange Pi with live GPIO output |
+| `BitA_Simulation/devices.py` | I2C device state machines (FCC, ECU, GEAR) and bus router |
+| `BitA_Simulation/main.py` | Terminal REPL — simulation only |
+| `BitA_Simulation/gui.py` | tkinter GUI — simulation only |
+| `BitA_Simulation/gpio_driver.py` | Raspberry Pi 5 hardware abstraction — lgpio PWM, fog sequencer |
+| `BitA_Simulation/gpio_bridge.py` | Watches device state changes and calls GPIO driver |
+| `BitA_Simulation/opi_main.py` | Entry point for Raspberry Pi 5 with live GPIO output |
+| `fetch_packages.sh` | Run once on a Pi WITH internet — bundles all packages into `packages/` |
+| `setup.sh` | Offline installer — installs from the `packages/` bundle, no internet needed |
+| `requirements.txt` | pip dependencies (lgpio) |
 
 ---
 
@@ -152,6 +158,21 @@ All five outputs use hardware PWM on the PD bank (PWM0 controller, ~1000 Hz).
 - Python 3.10+
 - `tkinter` (included with standard Python on Windows/macOS; `python3-tk` on Linux)
 
-### Orange Pi GPIO
-- `wiringOP` / `wiringop-python`
-- Run as root or with appropriate GPIO permissions
+### Raspberry Pi 5 GPIO
+- `lgpio` — bundled offline via `fetch_packages.sh` + `setup.sh` (see below)
+- Run as root or add your user to the `gpio` group
+
+### Offline Setup (Recommended)
+
+**Step 1** — on any Raspberry Pi with internet access:
+```bash
+chmod +x fetch_packages.sh && ./fetch_packages.sh
+```
+This downloads all apt and pip packages into `packages/`.
+
+**Step 2** — copy the entire repo (including `packages/`) to the offline Pi via USB or SD card.
+
+**Step 3** — on the offline Pi:
+```bash
+chmod +x setup.sh && ./setup.sh
+```

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-BricksInTheAir — Orange Pi entry point
+BricksInTheAir — Raspberry Pi 5 entry point
 
 Runs the full simulation with live GPIO output.
-Use this script on the Orange Pi 4 Pro instead of main.py or gui.py.
+Use this script on the Raspberry Pi 5 instead of main.py or gui.py.
 
     python simulation/opi_main.py          # terminal REPL
     python simulation/opi_main.py --gui    # tkinter GUI
