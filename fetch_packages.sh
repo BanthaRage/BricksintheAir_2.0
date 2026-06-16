@@ -26,46 +26,48 @@ PKG_PIP="$SCRIPT_DIR/packages/pip"
 
 mkdir -p "$PKG_APT" "$PKG_PIP"
 
-# ---------------------------------------------------------------------------
-# 1. apt packages + all recursive dependencies
-# ---------------------------------------------------------------------------
-
 APT_PACKAGES="python3-tk python3-lgpio"
+
+# ---------------------------------------------------------------------------
+# 1. apt packages — download directly into packages/apt/
+# ---------------------------------------------------------------------------
 
 info "Updating package lists..."
 sudo apt-get update -qq
 
-info "Resolving and downloading apt packages (including all dependencies)..."
+info "Resolving full dependency list for: $APT_PACKAGES"
 
-# Use a timestamp marker so we only copy what apt actually fetches
-touch /tmp/bita_fetch_marker
+# Get the complete recursive dependency list (excluding virtual packages)
+PKGLIST=$(apt-cache depends --recurse --no-recommends --no-suggests \
+    --no-conflicts --no-breaks --no-replaces --no-enhances \
+    $APT_PACKAGES 2>/dev/null \
+    | grep "^[a-zA-Z0-9]" \
+    | sort -u)
 
-# --download-only puts .deb files in /var/cache/apt/archives/
-# --reinstall forces a re-download even if already installed on this machine
-sudo apt-get install --download-only --reinstall -y $APT_PACKAGES
+info "Downloading .deb files to packages/apt/ ..."
 
-# Copy everything apt pulled since the marker
+# apt-get download fetches directly to the current directory — no apt cache involved
+cd "$PKG_APT"
 FETCHED=0
-while IFS= read -r deb; do
-    cp "$deb" "$PKG_APT/"
-    info "  Fetched: $(basename "$deb")"
-    (( FETCHED++ )) || true
-done < <(find /var/cache/apt/archives -name "*.deb" -newer /tmp/bita_fetch_marker)
-
-rm -f /tmp/bita_fetch_marker
-
-if (( FETCHED == 0 )); then
-    warn "No new .deb files were downloaded — packages may already be cached."
-    warn "If packages/apt/ is empty, run: sudo apt-get clean  then re-run this script."
-fi
+SKIPPED=0
+for pkg in $PKGLIST; do
+    if apt-get download "$pkg" 2>/dev/null; then
+        info "  $pkg"
+        (( FETCHED++ )) || true
+    else
+        # Virtual packages and already-downloaded duplicates land here — not an error
+        (( SKIPPED++ )) || true
+    fi
+done
+cd "$SCRIPT_DIR"
 
 # ---------------------------------------------------------------------------
-# 2. pip packages (architecture-matched wheel)
+# 2. pip packages
 # ---------------------------------------------------------------------------
 
-info "Downloading pip packages..."
+info "Downloading pip packages to packages/pip/ ..."
 python3 -m pip download lgpio -d "$PKG_PIP" --quiet
-info "  Fetched: $(ls "$PKG_PIP")"
+info "  lgpio"
 
 # ---------------------------------------------------------------------------
 # 3. Summary
@@ -76,7 +78,7 @@ PIP_COUNT=$(ls "$PKG_PIP"/ 2>/dev/null | wc -l)
 
 echo ""
 info "Done. Package bundle ready:"
-echo "  packages/apt/  — $APT_COUNT .deb file(s)"
+echo "  packages/apt/  — $APT_COUNT .deb file(s)  ($SKIPPED virtual/skipped)"
 echo "  packages/pip/  — $PIP_COUNT pip file(s)"
 echo ""
 info "Transfer the entire repo (including packages/) to the offline Pi, then run:"
