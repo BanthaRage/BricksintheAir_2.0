@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# BricksInTheAir — offline setup script (Raspberry Pi 5)
+# BricksInTheAir — setup script (Raspberry Pi 5)
 #
-# Requires the packages/ folder created by fetch_packages.sh.
-# No internet connection needed.
+# If lgpio and tkinter are already installed, this script skips package
+# installation entirely.  The packages/ bundle (from fetch_packages.sh)
+# is only required when packages are missing.
 #
 # Usage:
 #   chmod +x setup.sh && ./setup.sh
@@ -23,24 +24,7 @@ PKG_APT="$SCRIPT_DIR/packages/apt"
 PKG_PIP="$SCRIPT_DIR/packages/pip"
 
 # ---------------------------------------------------------------------------
-# 1. Preflight checks
-# ---------------------------------------------------------------------------
-
-info "Checking package bundle..."
-
-if [[ ! -d "$PKG_APT" ]] || [[ -z "$(ls "$PKG_APT"/*.deb 2>/dev/null)" ]]; then
-    error "packages/apt/ is missing or empty.\nRun fetch_packages.sh on a Pi with internet first, then transfer the repo."
-fi
-
-if [[ ! -d "$PKG_PIP" ]] || [[ -z "$(ls "$PKG_PIP"/ 2>/dev/null)" ]]; then
-    error "packages/pip/ is missing or empty.\nRun fetch_packages.sh on a Pi with internet first, then transfer the repo."
-fi
-
-info "  apt bundle : $(ls "$PKG_APT"/*.deb | wc -l) .deb file(s)"
-info "  pip bundle : $(ls "$PKG_PIP"/ | wc -l) file(s)"
-
-# ---------------------------------------------------------------------------
-# 2. Python version check (3.10+ required)
+# 1. Python version check (3.10+ required)
 # ---------------------------------------------------------------------------
 
 info "Checking Python version..."
@@ -59,36 +43,58 @@ fi
 info "Python $PY_VER — OK"
 
 # ---------------------------------------------------------------------------
-# 3. Install apt packages from local .deb files
+# 2. Check which packages are already installed
 # ---------------------------------------------------------------------------
 
-info "Installing apt packages from packages/apt/ ..."
+HAS_TKINTER=false
+HAS_LGPIO=false
 
-# dpkg -i installs all .deb files; apt-get install -f fixes any dependency
-# order issues using only already-downloaded packages.
-sudo dpkg -i "$PKG_APT"/*.deb 2>&1 | grep -v "^(Reading\|Selecting\|Preparing\|Unpacking\|Setting)" || true
+"$PYTHON" -c "import tkinter" 2>/dev/null && HAS_TKINTER=true || true
+"$PYTHON" -c "import lgpio"   2>/dev/null && HAS_LGPIO=true   || true
 
-# Repair any broken deps using only local packages (--no-download)
-if ! sudo apt-get install -f --no-download -y -qq 2>/dev/null; then
-    warn "apt-get -f reported issues — trying dpkg with relaxed dependency checks..."
-    sudo dpkg -i --force-depends "$PKG_APT"/*.deb
+if $HAS_TKINTER && $HAS_LGPIO; then
+    info "All packages already installed — skipping package installation."
+else
+    # -----------------------------------------------------------------------
+    # 3a. Install missing packages from bundle (offline)
+    # -----------------------------------------------------------------------
+
+    NEED_APT=false
+    NEED_PIP=false
+    $HAS_TKINTER || NEED_APT=true
+    $HAS_LGPIO   || { NEED_APT=true; NEED_PIP=true; }
+
+    if $NEED_APT; then
+        if [[ ! -d "$PKG_APT" ]] || [[ -z "$(ls "$PKG_APT"/*.deb 2>/dev/null)" ]]; then
+            error "packages/apt/ is missing or empty and packages need installing.\nRun fetch_packages.sh on a Pi with internet first, then transfer the repo."
+        fi
+
+        info "Installing apt packages from packages/apt/ ..."
+        sudo dpkg -i "$PKG_APT"/*.deb 2>&1 | grep -v "^(Reading\|Selecting\|Preparing\|Unpacking\|Setting)" || true
+
+        if ! sudo apt-get install -f --no-download -y -qq 2>/dev/null; then
+            warn "apt-get -f reported issues — trying dpkg with relaxed dependency checks..."
+            sudo dpkg -i --force-depends "$PKG_APT"/*.deb
+        fi
+    fi
+
+    if $NEED_PIP; then
+        if [[ ! -d "$PKG_PIP" ]] || [[ -z "$(ls "$PKG_PIP"/ 2>/dev/null)" ]]; then
+            error "packages/pip/ is missing or empty and lgpio needs installing.\nRun fetch_packages.sh on a Pi with internet first, then transfer the repo."
+        fi
+
+        info "Installing pip packages from packages/pip/ ..."
+        "$PYTHON" -m pip install \
+            --no-index \
+            --find-links="$PKG_PIP" \
+            --break-system-packages \
+            --quiet \
+            lgpio
+    fi
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Install pip packages from local wheel bundle
-# ---------------------------------------------------------------------------
-
-info "Installing pip packages from packages/pip/ ..."
-
-"$PYTHON" -m pip install \
-    --no-index \
-    --find-links="$PKG_PIP" \
-    --break-system-packages \
-    --quiet \
-    lgpio
-
-# ---------------------------------------------------------------------------
-# 5. GPIO group permissions
+# 4. GPIO group permissions
 # ---------------------------------------------------------------------------
 
 CURRENT_USER="${SUDO_USER:-$USER}"
@@ -102,7 +108,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Verify imports
+# 5. Verify imports
 # ---------------------------------------------------------------------------
 
 info "Verifying Python imports..."
@@ -116,7 +122,7 @@ info "Verifying Python imports..."
     || warn "  lgpio   — NOT FOUND (GPIO will run in mock mode)"
 
 # ---------------------------------------------------------------------------
-# 7. Done
+# 6. Done
 # ---------------------------------------------------------------------------
 
 echo ""
