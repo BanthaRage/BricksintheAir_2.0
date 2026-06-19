@@ -33,7 +33,7 @@ except ImportError:
 # Pin assignments (BCM / GPIO numbering)
 # ---------------------------------------------------------------------------
 
-GPIO_CHIP     = 4      # RPi 5: gpiochip4 (RP1).  RPi 4 and earlier: 0
+GPIO_CHIP     = 0      # Verify with `gpioinfo` — RPi 5 is typically gpiochip0
 
 GPIO_PROP      = 12    # Board 32  Propeller
 GPIO_PUMP      = 13    # Board 33  AFSS pump
