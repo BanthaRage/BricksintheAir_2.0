@@ -118,7 +118,10 @@ class App(tk.Tk):
         self.title("BricksInTheAir — I2C Simulator")
         self.configure(bg=Theme.BG)
         self.minsize(900, 550)
-        self.state("zoomed")          # start maximized
+        if self.tk.call("tk", "windowingsystem") == "win32":
+            self.state("zoomed")
+        else:
+            self.attributes("-zoomed", True)
 
         self.bus       = bus if bus is not None else I2CBus()
         self._history  = []
