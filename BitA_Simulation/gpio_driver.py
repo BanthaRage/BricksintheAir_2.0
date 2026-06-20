@@ -12,8 +12,8 @@ Pin map (BCM / GPIO numbering) — software PWM via lgpio, 1000 Hz:
   GPIO20  Board 38  Gear DOWN         DRV8833 IN2
   GPIO21  Board 40  AFSS coil         MOSFET 2
 
-RPi 5 uses gpiochip4 (RP1 southbridge).  If your kernel numbers it
-differently, adjust GPIO_CHIP below and verify with `gpioinfo`.
+RPi 5 confirmed as gpiochip0 on this unit. Verify with `gpioinfo` and
+adjust GPIO_CHIP below if yours differs.
 """
 
 import threading
@@ -49,10 +49,13 @@ PWM_FREQ_HZ = 1000     # software PWM frequency for all outputs
 # Fog sequence parameters
 # ---------------------------------------------------------------------------
 
-COIL_START_DUTY        = 35
-COIL_MAX_DUTY          = 50
-PUMP_START_DUTY        = 45
-FOG_PREHEAT_S          = 1.5
+# Coil is on 9V rail.  P = 81 × duty / 1.5 Ω = 54 × duty.
+# Rated coil power 8.6 W → 16% duty.  20% = 10.8 W, 25% = 13.5 W.
+COIL_START_DUTY        = 20   # 10.8 W on 9V — slightly above rated for reliable vaporization
+COIL_MAX_DUTY          = 25   # 13.5 W hard ceiling
+# Pump is on 5V rail; 75% ≈ 3.75 V average — good airflow without over-driving.
+PUMP_START_DUTY        = 75
+FOG_PREHEAT_S          = 3.0  # longer preheat needed at lower coil duty
 FOG_PURGE_S            = 0.4
 COIL_IDLE_PRESOAK_DUTY = 10
 COIL_IDLE_PRESOAK_S    = 2.0
