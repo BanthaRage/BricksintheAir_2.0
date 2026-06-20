@@ -84,13 +84,24 @@ class GPIODriver:
             self._ready = True
             return
 
-        self._h = lgpio.gpiochip_open(GPIO_CHIP)
+        h = lgpio.gpiochip_open(GPIO_CHIP)
+        if h < 0:
+            log.error("gpiochip_open(%d) failed: error %d — check permissions "
+                      "(run with sudo, or add user to gpio group and re-login)",
+                      GPIO_CHIP, h)
+            return
+
+        self._h = h
 
         for gpio in _ALL_GPIO:
-            lgpio.gpio_claim_output(self._h, gpio, 0)
+            rc = lgpio.gpio_claim_output(self._h, gpio, 0)
+            if rc < 0:
+                log.error("gpio_claim_output GPIO%d failed: error %d", gpio, rc)
 
         for gpio in _ALL_GPIO:
-            lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, 0.0)
+            rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, 0.0)
+            if rc < 0:
+                log.error("tx_pwm GPIO%d failed: error %d", gpio, rc)
 
         self._ready = True
         log.info("GPIO setup complete — 5× PWM @ %d Hz on gpiochip%d",
@@ -118,7 +129,9 @@ class GPIODriver:
     def _write(self, gpio: int, pct: float):
         pct = max(0.0, min(100.0, pct))
         if _HW and self._h is not None:
-            lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
+            rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
+            if rc < 0:
+                log.error("tx_pwm GPIO%d → %.1f%% failed: error %d", gpio, pct, rc)
         else:
             log.debug("[MOCK] PWM GPIO%d → %.1f%%", gpio, pct)
 
