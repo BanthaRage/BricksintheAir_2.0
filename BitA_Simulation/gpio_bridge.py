@@ -108,9 +108,12 @@ class GPIOBridge:
     # ------------------------------------------------------------------
 
     def _sync_fog(self):
-        fcc          = self._bus.fcc
-        smoke_active = fcc.smoke_active
-        smoke_popped = fcc.smoke_popped
+        fcc = self._bus.fcc
+        ecu = self._bus.ecu
+
+        # Fog triggered by FCC (POP_SMOKE) or ECU fault (engine overflow)
+        smoke_active = fcc.smoke_active or ecu.smoke_active
+        smoke_popped = fcc.smoke_popped or ecu.smoke_active
 
         # Fog just started
         if smoke_active and not self._last_smoke_active:
@@ -120,7 +123,7 @@ class GPIOBridge:
             )
             self._driver.trigger_fog(presoak=presoak)
 
-        # Fog just ended (active window closed by _check_smoke)
+        # Fog just ended
         if not smoke_active and self._last_smoke_active:
             self._driver.stop_fog()
 

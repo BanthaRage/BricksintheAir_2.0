@@ -295,8 +295,8 @@ class ECUDevice:
                     else:
                         self.tx_buffer.append(FAULT_DETECTED)
                 else:
-                    # Normal mode: only speeds 2-4 allowed
-                    if 2 <= payload <= 4:
+                    # Normal mode: speeds 1-4 allowed
+                    if 1 <= payload <= 4:
                         self.engine_speed = payload
                         self.tx_buffer.append(ACCEPTED_COMMAND)
                     else:
