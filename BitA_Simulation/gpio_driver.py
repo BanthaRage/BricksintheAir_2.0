@@ -99,9 +99,7 @@ class GPIODriver:
                 log.error("gpio_claim_output GPIO%d failed: error %d", gpio, rc)
 
         for gpio in _ALL_GPIO:
-            rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, 0.0)
-            if rc < 0:
-                log.error("tx_pwm GPIO%d failed: error %d", gpio, rc)
+            lgpio.gpio_write(self._h, gpio, 0)
 
         self._ready = True
         log.info("GPIO setup complete — 5× PWM @ %d Hz on gpiochip%d",
@@ -129,11 +127,15 @@ class GPIODriver:
     def _write(self, gpio: int, pct: float):
         pct = max(0.0, min(100.0, pct))
         if _HW and self._h is not None:
-            rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
-            if rc < 0:
-                log.error("tx_pwm GPIO%d → %.1f%% failed: error %d", gpio, pct, rc)
+            if pct == 0.0:
+                lgpio.tx_pwm(self._h, gpio, 0, 0)   # stop PWM
+                lgpio.gpio_write(self._h, gpio, 0)   # ensure LOW
+            else:
+                rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
+                if rc < 0:
+                    log.error("tx_pwm GPIO%d -> %.1f%% failed: error %d", gpio, pct, rc)
         else:
-            log.debug("[MOCK] PWM GPIO%d → %.1f%%", gpio, pct)
+            log.debug("[MOCK] PWM GPIO%d -> %.1f%%", gpio, pct)
 
     # ------------------------------------------------------------------
     # Propeller
