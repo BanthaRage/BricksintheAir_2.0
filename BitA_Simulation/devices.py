@@ -301,8 +301,7 @@ class ECUDevice:
                         self.tx_buffer.append(ACCEPTED_COMMAND)
                     else:
                         self.tx_buffer.append(REJECTED_COMMAND)
-                        if payload > 4:
-                            self.notifications.append(('error', "Command Rejected - Safety Measures Enforced"))
+                        self.notifications.append(('error', "Command Rejected - Safety Measures Enforced"))
 
             elif command == self.SET_MODE_OF_OPERATION:
                 if payload == PRI_OPERATION_MODE:
