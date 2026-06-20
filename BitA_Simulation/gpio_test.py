@@ -41,7 +41,7 @@ PINS = [
 # Fog sequence parameters
 COIL_PRESOAK_DUTY = 10
 COIL_PRESOAK_S    = 3.0
-COIL_PREHEAT_DUTY = 45
+COIL_PREHEAT_DUTY = 20
 COIL_PREHEAT_S    = 5.0
 PUMP_DUTY         = 100
 FOG_HOLD_S        = 15.0
