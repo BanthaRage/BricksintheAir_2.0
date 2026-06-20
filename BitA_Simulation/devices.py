@@ -51,13 +51,11 @@ class FCCDevice:
     GET_MAINT_STATUS      = 0x40
     SET_MAINT_STATUS      = 0x41
     SEND_RT_MSG           = 0x51
-    GET_LEGO_PF_CHANNEL   = 0x80
-    GET_LEGO_PF_COLOR     = 0x90
     RESET                 = 0xFE
     POP_SMOKE             = 0xB5
     EMERGENCY_STOP        = 0xE0
 
-    _SET_COMMANDS        = frozenset({0x11, 0x21, 0x31, 0x41, 0x51, 0xB5, 0xE0})
+    _SET_COMMANDS        = frozenset({0x11, 0x21, 0x31, 0x41, 0x51, 0xB5})
     SMOKE_DURATION_S     = 8.0      # fog active window per trigger
     SMOKE_COOLDOWN_S     = 15.0     # minimum seconds between triggers (starts when fog ENDS)
     SMOKE_IDLE_PRESOAK_S = 1800.0   # 30 min idle → pre-soak warning
@@ -132,6 +130,14 @@ class FCCDevice:
                     self.tx_buffer.append(REJECTED_COMMAND)
                     self.notifications.append(('error', "Rejected Command"))
 
+            elif command == self.EMERGENCY_STOP:
+                self.emergency_stop    = True
+                self.smoke_active      = False
+                self._smoke_start_time = None
+                self._set_led(0x00, 0x00, 0x01)
+                self.tx_buffer.append(ACCEPTED_COMMAND)
+                self.notifications.append(('error', "EMERGENCY STOP — all outputs cut"))
+
             elif command == self.POP_SMOKE:
                 if payload == 0x01:   # ON
                     if self.tank_empty:
@@ -177,10 +183,6 @@ class FCCDevice:
                 self.tx_buffer.append(self.operation_mode)
             elif command == self.GET_MAINT_STATUS:
                 self.tx_buffer.append(self.maint_status)
-            elif command == self.GET_LEGO_PF_CHANNEL:
-                self.tx_buffer.append(3)     # LEGO_IR_CHANNEL = 3 (ch4)
-            elif command == self.GET_LEGO_PF_COLOR:
-                self.tx_buffer.append(0x00)  # LEGO_MOTOR_OUTPUT_BLOCK = RED
             elif command == self.EMERGENCY_STOP:
                 self.emergency_stop    = True
                 self.smoke_active      = False
@@ -227,8 +229,6 @@ class ECUDevice:
     SET_MODE_OF_OPERATION = 0x31
     GET_MAINT_STATUS      = 0x40
     SET_MAINT_STATUS      = 0x41
-    GET_LEGO_PF_CHANNEL   = 0x80
-    GET_LEGO_PF_COLOR     = 0x90
     RESET                 = 0xFE
 
     _SET_COMMANDS = frozenset({0x11, 0x15, 0x31, 0x41})
@@ -355,10 +355,6 @@ class ECUDevice:
                 self.tx_buffer.append(self.operation_mode)
             elif command == self.GET_MAINT_STATUS:
                 self.tx_buffer.append(self.maint_status)
-            elif command == self.GET_LEGO_PF_CHANNEL:
-                self.tx_buffer.append(0)     # LEGO_IR_CHANNEL = 0 (ch1)
-            elif command == self.GET_LEGO_PF_COLOR:
-                self.tx_buffer.append(0x00)  # RED
             elif command == self.RESET:
                 self.engine_speed   = self.MOTOR_START_SPEED
                 self.operation_mode = PRI_OPERATION_MODE
@@ -394,8 +390,6 @@ class GearDevice:
     SET_MODE_OF_OPERTION = 0x31
     GET_MAINT_STATUS     = 0x40
     SET_MAINT_STATUS     = 0x41
-    GET_LEGO_PF_CHANNEL  = 0x80
-    GET_LEGO_PF_COLOR    = 0x90
     RESET                = 0xFE
 
     _SET_COMMANDS = frozenset({0x21, 0x31, 0x41})
@@ -501,10 +495,6 @@ class GearDevice:
                 self.tx_buffer.append(self.operation_mode)
             elif command == self.GET_MAINT_STATUS:
                 self.tx_buffer.append(self.maint_status)
-            elif command == self.GET_LEGO_PF_CHANNEL:
-                self.tx_buffer.append(0)     # LEGO_IR_CHANNEL = 0 (ch1)
-            elif command == self.GET_LEGO_PF_COLOR:
-                self.tx_buffer.append(0x01)  # BLUE
             elif command == self.RESET:
                 # If in transit, complete it first (matches Arduino delay logic)
                 if self.gear_position == GEAR_IN_TRANSIT:

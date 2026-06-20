@@ -130,6 +130,13 @@ class GPIODriver:
         pct = max(0.0, min(100.0, pct))
         if _HW and self._h is not None:
             if pct == 0.0:
+                # gpio_write alone may not cancel an active tx_pwm waveform on
+                # RP1.  Replace the wave with a 1% duty cycle first (10µs/ms —
+                # negligible for any motor or coil), then pull the pin LOW.
+                try:
+                    lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, 1.0)
+                except Exception:
+                    pass
                 lgpio.gpio_write(self._h, gpio, 0)
             else:
                 rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
