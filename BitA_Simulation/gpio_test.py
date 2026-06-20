@@ -38,13 +38,13 @@ PINS = [
     (GPIO_COIL,    "AFSS coil    (Board 40)"),
 ]
 
-# Fog sequence parameters (must match gpio_driver.py)
+# Fog sequence parameters
 COIL_PRESOAK_DUTY = 10
-COIL_PRESOAK_S    = 2.0
-COIL_PREHEAT_DUTY = 35
-COIL_PREHEAT_S    = 1.5
+COIL_PRESOAK_S    = 3.0
+COIL_PREHEAT_DUTY = 45
+COIL_PREHEAT_S    = 5.0
 PUMP_DUTY         = 45
-FOG_HOLD_S        = 8.0
+FOG_HOLD_S        = 10.0
 FOG_PURGE_S       = 0.4
 
 
