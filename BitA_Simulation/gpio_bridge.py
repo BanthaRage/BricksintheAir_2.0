@@ -63,7 +63,7 @@ class GPIOBridge:
         while True:
             time.sleep(1.0)
             self._bus.fcc._check_smoke()
-            self._sync_fog()
+            self.update()
 
     def update(self):
         """Compare current device state against shadows and drive GPIO."""

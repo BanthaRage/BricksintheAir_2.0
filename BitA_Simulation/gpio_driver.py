@@ -179,10 +179,10 @@ class GPIODriver:
         if self._fog_thread and self._fog_thread.is_alive():
             self._fog_thread.join(timeout=1.0)
         for gpio in _ALL_GPIO:
-            if _HW and self._h is not None:
-                lgpio.gpio_write(self._h, gpio, 0)
-            else:
-                log.debug("[MOCK] EMERGENCY STOP GPIO%d -> 0", gpio)
+            try:
+                self._write(gpio, 0)
+            except Exception as e:
+                log.error("emergency_stop GPIO%d write failed: %s", gpio, e)
         log.warning("EMERGENCY STOP — all GPIO outputs cut")
 
     def trigger_fog(self, presoak: bool = False):

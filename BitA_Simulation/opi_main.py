@@ -77,6 +77,7 @@ def run_repl(bus):
             print("System reset — all devices returned to initial state.")
         elif '[' in line:
             m.execute_and_display(bus, line)
+            bus.bridge.update()
         else:
             print("ERROR: unknown command — type 'help' for usage")
 
