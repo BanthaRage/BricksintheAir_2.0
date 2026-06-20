@@ -112,7 +112,6 @@ class GPIODriver:
 
         if _HW and self._ready and self._h is not None:
             for gpio in _ALL_GPIO:
-                lgpio.tx_pwm(self._h, gpio, 0, 0)
                 lgpio.gpio_write(self._h, gpio, 0)
             lgpio.gpiochip_close(self._h)
             self._h = None
@@ -128,8 +127,7 @@ class GPIODriver:
         pct = max(0.0, min(100.0, pct))
         if _HW and self._h is not None:
             if pct == 0.0:
-                lgpio.tx_pwm(self._h, gpio, 0, 0)   # stop PWM
-                lgpio.gpio_write(self._h, gpio, 0)   # ensure LOW
+                lgpio.gpio_write(self._h, gpio, 0)
             else:
                 rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
                 if rc < 0:

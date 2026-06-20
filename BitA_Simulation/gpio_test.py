@@ -69,7 +69,6 @@ def pwm(h, gpio, duty):
 
 
 def stop(h, gpio):
-    lgpio.tx_pwm(h, gpio, 0, 0)
     lgpio.gpio_write(h, gpio, 0)
 
 
