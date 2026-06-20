@@ -32,6 +32,7 @@ def build_bus() -> I2CBus:
     bus    = I2CBus()
     bridge = GPIOBridge(bus, driver)
     bus.bridge = bridge
+    bridge.update()   # sync initial device state (ECU speed 2 → propeller at 40%)
     return bus, driver
 
 
