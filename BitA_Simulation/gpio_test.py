@@ -88,6 +88,9 @@ def test_smoke(h):
     try:
         print("Smoke cycle starting -- Ctrl+C to abort at any time\n")
 
+        print(f"[0/4] Pump on  -- pump at {PUMP_DUTY}% (runs whenever coil is on) ...")
+        pwm(h, GPIO_PUMP, PUMP_DUTY)
+
         print(f"[1/4] Presoak  -- coil at {COIL_PRESOAK_DUTY}% for {COIL_PRESOAK_S}s ...")
         pwm(h, GPIO_COIL, COIL_PRESOAK_DUTY)
         time.sleep(COIL_PRESOAK_S)
@@ -97,7 +100,6 @@ def test_smoke(h):
         time.sleep(COIL_PREHEAT_S)
 
         print(f"[3/4] Fog active -- coil {COIL_PREHEAT_DUTY}% + pump {PUMP_DUTY}% for {FOG_HOLD_S}s ...")
-        pwm(h, GPIO_PUMP, PUMP_DUTY)
         time.sleep(FOG_HOLD_S)
 
         print(f"[4/4] Purge    -- coil off, pump running for {FOG_PURGE_S}s ...")
