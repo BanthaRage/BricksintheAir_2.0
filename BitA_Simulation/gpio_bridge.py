@@ -10,6 +10,7 @@ Engine speed → propeller duty:
 """
 
 import logging
+import threading
 import time
 
 from devices import (
@@ -53,6 +54,16 @@ class GPIOBridge:
         self._last_smoke_active = False
         self._last_smoke_popped = False
         self._last_emergency    = False
+        self._last_ecu_smoke    = False
+
+        # Background tick: expires smoke timers even with no I2C traffic
+        threading.Thread(target=self._ticker, daemon=True, name="bridge-tick").start()
+
+    def _ticker(self):
+        while True:
+            time.sleep(1.0)
+            self._bus.fcc._check_smoke()
+            self._sync_fog()
 
     def update(self):
         """Compare current device state against shadows and drive GPIO."""
@@ -134,9 +145,18 @@ class GPIOBridge:
         fcc = self._bus.fcc
         ecu = self._bus.ecu
 
-        # Fog triggered by FCC (POP_SMOKE) or ECU fault (engine overflow)
-        smoke_active = fcc.smoke_active or ecu.smoke_active
-        smoke_popped = fcc.smoke_popped or ecu.smoke_active
+        # ECU overflow → activate FCC AFSS timer (one-shot, routes through
+        # FCC so the 8s duration and stop signal are managed centrally)
+        if ecu.smoke_active and not self._last_ecu_smoke:
+            if not fcc.smoke_active:
+                fcc.smoke_active      = True
+                fcc.smoke_popped      = True
+                fcc._smoke_start_time = time.time()
+        self._last_ecu_smoke = ecu.smoke_active
+
+        # All fog is now FCC-managed; ecu.smoke_active only triggers the timer above
+        smoke_active = fcc.smoke_active
+        smoke_popped = fcc.smoke_popped
 
         # Fog just started
         if smoke_active and not self._last_smoke_active:
@@ -146,7 +166,7 @@ class GPIOBridge:
             )
             self._driver.trigger_fog(presoak=presoak)
 
-        # Fog just ended
+        # Fog just ended (FCC timer expired)
         if not smoke_active and self._last_smoke_active:
             self._driver.stop_fog()
 
