@@ -52,12 +52,27 @@ class GPIOBridge:
         self._last_gear         = -1
         self._last_smoke_active = False
         self._last_smoke_popped = False
+        self._last_emergency    = False
 
     def update(self):
         """Compare current device state against shadows and drive GPIO."""
+        self._sync_emergency()
         self._sync_propeller()
         self._sync_gear()
         self._sync_fog()
+
+    # ------------------------------------------------------------------
+    # Emergency stop
+    # ------------------------------------------------------------------
+
+    def _sync_emergency(self):
+        emergency = self._bus.fcc.emergency_stop
+        if emergency and not self._last_emergency:
+            self._driver.emergency_stop()
+            # Force all shadow state so subsequent syncs don't re-drive outputs
+            self._last_speed        = 0
+            self._last_smoke_active = False
+        self._last_emergency = emergency
 
     # ------------------------------------------------------------------
     # Propeller

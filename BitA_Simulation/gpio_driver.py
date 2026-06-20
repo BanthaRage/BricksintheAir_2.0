@@ -173,6 +173,18 @@ class GPIODriver:
     # AFSS fog sequence
     # ------------------------------------------------------------------
 
+    def emergency_stop(self):
+        """Cut all outputs immediately — no purge, no delay."""
+        self._fog_stop.set()
+        if self._fog_thread and self._fog_thread.is_alive():
+            self._fog_thread.join(timeout=1.0)
+        for gpio in _ALL_GPIO:
+            if _HW and self._h is not None:
+                lgpio.gpio_write(self._h, gpio, 0)
+            else:
+                log.debug("[MOCK] EMERGENCY STOP GPIO%d -> 0", gpio)
+        log.warning("EMERGENCY STOP — all GPIO outputs cut")
+
     def trigger_fog(self, presoak: bool = False):
         """
         Start the fog sequence in a background thread.

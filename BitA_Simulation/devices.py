@@ -55,8 +55,9 @@ class FCCDevice:
     GET_LEGO_PF_COLOR     = 0x90
     RESET                 = 0xFE
     POP_SMOKE             = 0xB5
+    EMERGENCY_STOP        = 0xE0
 
-    _SET_COMMANDS        = frozenset({0x11, 0x21, 0x31, 0x41, 0x51, 0xB5})
+    _SET_COMMANDS        = frozenset({0x11, 0x21, 0x31, 0x41, 0x51, 0xB5, 0xE0})
     SMOKE_DURATION_S     = 8.0      # fog active window per trigger
     SMOKE_COOLDOWN_S     = 15.0     # minimum seconds between triggers (starts when fog ENDS)
     SMOKE_IDLE_PRESOAK_S = 1800.0   # 30 min idle → pre-soak warning
@@ -67,6 +68,7 @@ class FCCDevice:
         self.smoke_popped      = False
         self.smoke_active      = False   # True while 8-second trigger window is open
         self.tank_empty        = False   # dry-fire prevention flag
+        self.emergency_stop    = False   # True after EMERGENCY_STOP until RESET
         self._smoke_start_time = None    # when current trigger started
         self._last_smoke_time  = None    # when last trigger ENDED (cooldown reference)
         self.rx_buffer         = []
@@ -179,9 +181,17 @@ class FCCDevice:
                 self.tx_buffer.append(3)     # LEGO_IR_CHANNEL = 3 (ch4)
             elif command == self.GET_LEGO_PF_COLOR:
                 self.tx_buffer.append(0x00)  # LEGO_MOTOR_OUTPUT_BLOCK = RED
+            elif command == self.EMERGENCY_STOP:
+                self.emergency_stop    = True
+                self.smoke_active      = False
+                self._smoke_start_time = None
+                self._set_led(0x00, 0x00, 0x01)   # red = emergency
+                self.tx_buffer.append(ACCEPTED_COMMAND)
+                self.notifications.append(('error', "EMERGENCY STOP — all outputs cut"))
             elif command == self.RESET:
                 self.smoke_popped      = False
                 self.smoke_active      = False
+                self.emergency_stop    = False
                 self._smoke_start_time = None
                 self._last_smoke_time  = None
                 self.operation_mode    = PRI_OPERATION_MODE
