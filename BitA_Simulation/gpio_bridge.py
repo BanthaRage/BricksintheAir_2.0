@@ -69,8 +69,10 @@ class GPIOBridge:
         emergency = self._bus.fcc.emergency_stop
         if emergency and not self._last_emergency:
             self._driver.emergency_stop()
-            # Force all shadow state so subsequent syncs don't re-drive outputs
-            self._last_speed        = 0
+        if not emergency and self._last_emergency:
+            # Coming out of emergency — force full re-sync on next tick
+            self._last_speed        = -1
+            self._last_gear         = -1
             self._last_smoke_active = False
         self._last_emergency = emergency
 
@@ -79,6 +81,8 @@ class GPIOBridge:
     # ------------------------------------------------------------------
 
     def _sync_propeller(self):
+        if self._bus.fcc.emergency_stop:
+            return
         speed = self._bus.ecu.engine_speed
 
         # Offline ECU → motor off
@@ -97,6 +101,8 @@ class GPIOBridge:
     # ------------------------------------------------------------------
 
     def _sync_gear(self):
+        if self._bus.fcc.emergency_stop:
+            return
         pos = self._bus.gear.gear_position
 
         if pos == self._last_gear:
@@ -123,6 +129,8 @@ class GPIOBridge:
     # ------------------------------------------------------------------
 
     def _sync_fog(self):
+        if self._bus.fcc.emergency_stop:
+            return
         fcc = self._bus.fcc
         ecu = self._bus.ecu
 

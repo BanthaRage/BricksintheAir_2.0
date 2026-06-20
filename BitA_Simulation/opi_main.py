@@ -52,6 +52,11 @@ def run_repl(bus):
         lower = line.lower()
         if lower in ('quit', 'exit', 'q'):
             break
+        elif lower == 'stop':
+            bus.fcc.emergency_stop = True
+            bus.fcc.smoke_active   = False
+            bus.bridge.update()
+            print("EMERGENCY STOP — all outputs cut. Send [0xBB 0xFE] or 'system reset' to restore.")
         elif lower in ('help', '?'):
             print(m.HELP_TEXT)
         elif lower == 'status':
