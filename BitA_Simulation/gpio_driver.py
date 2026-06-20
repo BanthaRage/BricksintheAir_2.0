@@ -176,10 +176,9 @@ class GPIODriver:
     def trigger_fog(self, presoak: bool = False):
         """
         Start the fog sequence in a background thread.
+          pump on immediately (runs whenever coil is on)
           [optional] coil at 10% for 2s  (idle presoak)
-          coil at 35%
-          wait 1.5s  (preheat)
-          pump at 45%
+          coil at 20% for 3s             (preheat)
           hold until stop_fog() is called
         """
         if self._fog_thread and self._fog_thread.is_alive():
@@ -212,21 +211,21 @@ class GPIODriver:
 
     def _fog_sequence(self, presoak: bool):
         try:
+            self._write(GPIO_PUMP, PUMP_START_DUTY)
+            log.info("Fog pump on: %d%%", PUMP_START_DUTY)
+
             if presoak:
                 log.info("Fog pre-soak: coil at %d%% for %.1fs",
                          COIL_IDLE_PRESOAK_DUTY, COIL_IDLE_PRESOAK_S)
                 self._write(GPIO_COIL, COIL_IDLE_PRESOAK_DUTY)
                 if self._fog_stop.wait(timeout=COIL_IDLE_PRESOAK_S):
-                    self._write(GPIO_COIL, 0)
                     return
 
             self._write(GPIO_COIL, COIL_START_DUTY)
-            log.info("Fog preheat: coil at %d%%", COIL_START_DUTY)
+            log.info("Fog preheat: coil at %d%% for %.1fs", COIL_START_DUTY, FOG_PREHEAT_S)
             if self._fog_stop.wait(timeout=FOG_PREHEAT_S):
-                self._write(GPIO_COIL, 0)
                 return
 
-            self._write(GPIO_PUMP, PUMP_START_DUTY)
             log.info("Fog active: coil %d%% + pump %d%%", COIL_START_DUTY, PUMP_START_DUTY)
             self._fog_stop.wait()
 
