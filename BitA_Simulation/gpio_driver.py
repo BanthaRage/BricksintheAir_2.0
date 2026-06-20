@@ -54,7 +54,7 @@ PWM_FREQ_HZ = 1000     # software PWM frequency for all outputs
 COIL_START_DUTY        = 20   # 10.8 W on 9V — slightly above rated for reliable vaporization
 COIL_MAX_DUTY          = 25   # 13.5 W hard ceiling
 # Pump is on 5V rail; 75% ≈ 3.75 V average — good airflow without over-driving.
-PUMP_START_DUTY        = 75
+PUMP_START_DUTY        = 100
 FOG_PREHEAT_S          = 3.0  # longer preheat needed at lower coil duty
 FOG_PURGE_S            = 0.4
 COIL_IDLE_PRESOAK_DUTY = 10
