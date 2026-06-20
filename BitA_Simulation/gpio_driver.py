@@ -56,7 +56,7 @@ COIL_MAX_DUTY          = 25   # 13.5 W hard ceiling
 # Pump is on 5V rail; 75% ≈ 3.75 V average — good airflow without over-driving.
 PUMP_START_DUTY        = 100
 FOG_PREHEAT_S          = 3.0  # longer preheat needed at lower coil duty
-FOG_PURGE_S            = 0.4
+FOG_PURGE_S            = 3.0
 COIL_IDLE_PRESOAK_DUTY = 10
 COIL_IDLE_PRESOAK_S    = 2.0
 

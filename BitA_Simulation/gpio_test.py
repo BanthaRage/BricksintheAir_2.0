@@ -45,7 +45,7 @@ COIL_PREHEAT_DUTY = 20
 COIL_PREHEAT_S    = 5.0
 PUMP_DUTY         = 100
 FOG_HOLD_S        = 10.0
-FOG_PURGE_S       = 0.4
+FOG_PURGE_S       = 3.0
 
 
 def open_chip():
