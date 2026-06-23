@@ -13,10 +13,11 @@ import argparse
 import logging
 import sys
 import os
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from devices      import I2CBus
+from devices      import I2CBus, GEAR_EXTENDED, GEAR_TRANSIT_DELAY_S
 from gpio_driver  import GPIODriver
 from gpio_bridge  import GPIOBridge, OVERSPEED_RUNON_S
 
@@ -108,6 +109,10 @@ def main():
         else:
             run_repl(bus)
     finally:
+        if bus.gear.gear_position != GEAR_EXTENDED:
+            print("Parking landing gear...")
+            driver.gear_up(100.0)
+            time.sleep(GEAR_TRANSIT_DELAY_S)
         driver.cleanup()
 
 
