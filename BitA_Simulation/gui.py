@@ -411,6 +411,7 @@ class App(tk.Tk):
             bus.bridge._last_smoke_popped = False
             bus.bridge._last_emergency    = False
             bus.bridge._last_ecu_smoke    = False
+            bus.bridge._overspeed_cutoff  = None
             bus.bridge.update()
         self._refresh_all_panels()
         self._log("System reset — all devices returned to initial state.", "dim")

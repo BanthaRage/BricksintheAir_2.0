@@ -5,8 +5,8 @@ Watches I2CBus device state and translates changes into GPIODriver calls.
 Call update() after each bus transaction and on the GUI poll tick.
 
 Engine speed → propeller duty:
-  Level 0 →  0%   Level 1 → 20%
-  Level 2 → 40%   Level 3 → 60%   Level 4 → 80%
+  Level 0 →  0%   Level 1 → 35%
+  Level 2 → 50%   Level 3 → 65%   Level 4 → 80%   Level 5 → 100%
 """
 
 import logging
@@ -22,7 +22,10 @@ from gpio_driver import FOG_PREHEAT_S
 log = logging.getLogger(__name__)
 
 # Engine level → propeller PWM duty (%)
-SPEED_DUTY = {0: 0, 1: 20, 2: 40, 3: 60, 4: 80}
+SPEED_DUTY = {0: 0, 1: 35, 2: 50, 3: 65, 4: 80, 5: 100}
+
+# Seconds the propeller runs at full throttle after ECU overspeed before cutting
+OVERSPEED_RUNON_S = 6.0
 
 # Gear motor duty — full power; timed stop is handled by GearDevice
 GEAR_DUTY = 100.0
@@ -56,6 +59,7 @@ class GPIOBridge:
         self._last_smoke_popped = False
         self._last_emergency    = False
         self._last_ecu_smoke    = False
+        self._overspeed_cutoff  = None   # time.time() + OVERSPEED_RUNON_S on ECU overflow
 
         # Background tick: expires smoke timers even with no I2C traffic
         threading.Thread(target=self._ticker, daemon=True, name="bridge-tick").start()
@@ -86,6 +90,7 @@ class GPIOBridge:
             self._last_speed        = -1
             self._last_gear         = -1
             self._last_smoke_active = False
+            self._overspeed_cutoff  = None
         self._last_emergency = emergency
 
     # ------------------------------------------------------------------
@@ -95,11 +100,17 @@ class GPIOBridge:
     def _sync_propeller(self):
         if self._bus.fcc.emergency_stop:
             return
-        speed = self._bus.ecu.engine_speed
+        ecu   = self._bus.ecu
+        speed = ecu.engine_speed
 
-        # Offline ECU → motor off
-        if self._bus.ecu.smoke_active:
-            speed = 0
+        if ecu.smoke_active:
+            # Start runon timer on first overflow detection
+            if self._overspeed_cutoff is None:
+                self._overspeed_cutoff = time.time() + OVERSPEED_RUNON_S
+            # Full throttle during runon window, then cut
+            speed = 5 if time.time() < self._overspeed_cutoff else 0
+        else:
+            self._overspeed_cutoff = None
 
         if speed == self._last_speed:
             return
