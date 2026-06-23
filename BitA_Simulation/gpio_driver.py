@@ -138,6 +138,10 @@ class GPIODriver:
                 except Exception as e:
                     log.warning("tx_pwm stop GPIO%d: %s", gpio, e)
                 lgpio.gpio_write(self._h, gpio, 0)
+            elif pct == 100.0:
+                # tx_pwm rejects 100% (0 µs OFF time = "bad PWM micros").
+                # Hold the pin statically HIGH instead — identical electrically.
+                lgpio.gpio_write(self._h, gpio, 1)
             else:
                 rc = lgpio.tx_pwm(self._h, gpio, PWM_FREQ_HZ, pct)
                 if rc < 0:
