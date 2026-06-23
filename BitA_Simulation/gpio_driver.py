@@ -37,8 +37,8 @@ GPIO_CHIP     = 0      # Verify with `gpioinfo` — RPi 5 is typically gpiochip0
 
 GPIO_PROP      = 12    # Board 32  Propeller
 GPIO_PUMP      = 13    # Board 33  AFSS pump
-GPIO_GEAR_UP   = 20    # Board 38  Gear UP   (DRV8833 IN2)
-GPIO_GEAR_DOWN = 16    # Board 36  Gear DOWN (DRV8833 IN1)
+GPIO_GEAR_UP   = 16    # Board 36  Gear UP   (DRV8833 IN1)
+GPIO_GEAR_DOWN = 20    # Board 38  Gear DOWN (DRV8833 IN2)
 GPIO_COIL      = 21    # Board 40  AFSS coil
 
 _ALL_GPIO = (GPIO_PROP, GPIO_PUMP, GPIO_GEAR_UP, GPIO_GEAR_DOWN, GPIO_COIL)
