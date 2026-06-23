@@ -395,7 +395,10 @@ class App(tk.Tk):
         elif lower == "system reset":
             self._reset_system()
         elif "[" in line:
-            self._execute(line)
+            if self.bus.ecu.smoke_active:
+                self._log("WARNING: System in shutdown state — type 'system reset' to restore.", "warning")
+            else:
+                self._execute(line)
         else:
             self._log("ERROR: unknown command — type 'help' for usage", "error")
 

@@ -257,7 +257,10 @@ def main():
             bus = I2CBus()
             print("System reset — all devices returned to initial state.")
         elif '[' in line:
-            execute_and_display(bus, line)
+            if bus.ecu.smoke_active:
+                print("WARNING: System in shutdown state — type 'system reset' to restore.")
+            else:
+                execute_and_display(bus, line)
         else:
             print("ERROR: unknown command — type 'help' for usage")
 

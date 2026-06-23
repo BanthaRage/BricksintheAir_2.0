@@ -80,8 +80,11 @@ def run_repl(bus):
             bus.bridge.update()
             print("System reset — all devices returned to initial state.")
         elif '[' in line:
-            m.execute_and_display(bus, line, engine_shutdown_delay=OVERSPEED_RUNON_S)
-            bus.bridge.update()
+            if bus.ecu.smoke_active:
+                print("WARNING: System in shutdown state — type 'system reset' to restore.")
+            else:
+                m.execute_and_display(bus, line, engine_shutdown_delay=OVERSPEED_RUNON_S)
+                bus.bridge.update()
         else:
             print("ERROR: unknown command — type 'help' for usage")
 
