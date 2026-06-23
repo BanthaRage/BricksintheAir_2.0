@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from devices      import I2CBus
 from gpio_driver  import GPIODriver
-from gpio_bridge  import GPIOBridge
+from gpio_bridge  import GPIOBridge, OVERSPEED_RUNON_S
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,7 +80,7 @@ def run_repl(bus):
             bus.bridge.update()
             print("System reset — all devices returned to initial state.")
         elif '[' in line:
-            m.execute_and_display(bus, line)
+            m.execute_and_display(bus, line, engine_shutdown_delay=OVERSPEED_RUNON_S)
             bus.bridge.update()
         else:
             print("ERROR: unknown command — type 'help' for usage")

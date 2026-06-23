@@ -24,6 +24,11 @@ from devices import (
 )
 from main import parse_transactions, BANNER, HELP_TEXT, ENGINE_WARN1, ENGINE_WARN2, ENGINE_WARN3
 
+try:
+    from gpio_bridge import OVERSPEED_RUNON_S as _ENGINE_RUNON_S
+except ImportError:
+    _ENGINE_RUNON_S = 10.0
+
 
 # ---------------------------------------------------------------------------
 # Theme
@@ -459,7 +464,8 @@ class App(tk.Tk):
             if note[0] == "smoke":
                 self._log(ENGINE_WARN1, "smoke")
                 self.after(2000, lambda: self._log(ENGINE_WARN2, "smoke"))
-                self.after(4000, lambda: self._log(ENGINE_WARN3, "smoke"))
+                # Delay WARN3 to match engine cutoff
+                self.after(int(_ENGINE_RUNON_S * 1000), lambda: self._log(ENGINE_WARN3, "smoke"))
                 # Auto-deploy AFSS if not already running
                 fcc = self.bus.fcc
                 if not fcc.smoke_active:

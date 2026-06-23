@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 SPEED_DUTY = {0: 0, 1: 35, 2: 50, 3: 65, 4: 80, 5: 100}
 
 # Seconds the propeller runs at full throttle after ECU overspeed before cutting
-OVERSPEED_RUNON_S = 6.0
+OVERSPEED_RUNON_S = 10.0
 
 # Gear motor duty — full power; timed stop is handled by GearDevice
 GEAR_DUTY = 100.0
