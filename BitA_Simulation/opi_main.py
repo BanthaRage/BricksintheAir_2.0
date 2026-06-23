@@ -35,7 +35,11 @@ def build_bus() -> I2CBus:
     bus.bridge = bridge
     bridge.update()   # sync initial device state (ECU speed 2 → propeller at 40%)
 
-    # Retract gear on startup — confirms GPIO pins are live
+    # Extend then retract on startup — GPIO test, always starts from a known state
+    print("Extending landing gear...")
+    driver.gear_down(100.0)
+    time.sleep(GEAR_TRANSIT_DELAY_S)
+    driver.gear_stop()
     print("Retracting landing gear...")
     driver.gear_up(100.0)
     time.sleep(GEAR_TRANSIT_DELAY_S)
