@@ -163,15 +163,15 @@ class GPIODriver:
     # ------------------------------------------------------------------
 
     def gear_up(self, duty_pct: float = 100.0):
-        """Drive DRV8833 IN1 high, IN2 low — motor extends gear."""
-        self._write(GPIO_GEAR_DOWN, 0)
-        self._write(GPIO_GEAR_UP,   duty_pct)
+        """Drive DRV8833 IN2 high, IN1 low — motor retracts gear (up)."""
+        self._write(GPIO_GEAR_UP,   0)
+        self._write(GPIO_GEAR_DOWN, duty_pct)
         log.info("Gear UP  → %.1f%%", duty_pct)
 
     def gear_down(self, duty_pct: float = 100.0):
-        """Drive DRV8833 IN2 high, IN1 low — motor retracts gear."""
-        self._write(GPIO_GEAR_UP,   0)
-        self._write(GPIO_GEAR_DOWN, duty_pct)
+        """Drive DRV8833 IN1 high, IN2 low — motor extends gear (down)."""
+        self._write(GPIO_GEAR_DOWN, 0)
+        self._write(GPIO_GEAR_UP,   duty_pct)
         log.info("Gear DOWN → %.1f%%", duty_pct)
 
     def gear_stop(self):
