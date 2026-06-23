@@ -74,6 +74,9 @@ def run_repl(bus):
             bus.bridge._last_gear         = -1
             bus.bridge._last_smoke_active = False
             bus.bridge._last_smoke_popped = False
+            bus.bridge._last_emergency    = False
+            bus.bridge._last_ecu_smoke    = False
+            bus.bridge.update()
             print("System reset — all devices returned to initial state.")
         elif '[' in line:
             m.execute_and_display(bus, line)

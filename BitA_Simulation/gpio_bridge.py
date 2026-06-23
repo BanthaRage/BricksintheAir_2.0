@@ -17,6 +17,7 @@ from devices import (
     GEAR_EXTENDED, GEAR_RETRACTED, GEAR_IN_TRANSIT,
     SEC_OPERATION_MODE,
 )
+from gpio_driver import FOG_PREHEAT_S
 
 log = logging.getLogger(__name__)
 
@@ -151,7 +152,9 @@ class GPIOBridge:
             if not fcc.smoke_active:
                 fcc.smoke_active      = True
                 fcc.smoke_popped      = True
-                fcc._smoke_start_time = time.time()
+                # Offset start time by preheat so the FCC timer gives
+                # SMOKE_DURATION_S of actual vapor, not preheat + vapor.
+                fcc._smoke_start_time = time.time() + FOG_PREHEAT_S
         self._last_ecu_smoke = ecu.smoke_active
 
         # All fog is now FCC-managed; ecu.smoke_active only triggers the timer above

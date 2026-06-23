@@ -395,7 +395,23 @@ class App(tk.Tk):
             self._log("ERROR: unknown command — type 'help' for usage", "error")
 
     def _reset_system(self):
-        self.bus = I2CBus()
+        bus = self.bus
+        bus.fcc  = type(bus.fcc)()
+        bus.ecu  = type(bus.ecu)()
+        bus.gear = type(bus.gear)()
+        bus._devices = {
+            bus.fcc.ADDRESS:  bus.fcc,
+            bus.ecu.ADDRESS:  bus.ecu,
+            bus.gear.ADDRESS: bus.gear,
+        }
+        if bus.bridge is not None:
+            bus.bridge._last_speed        = -1
+            bus.bridge._last_gear         = -1
+            bus.bridge._last_smoke_active = False
+            bus.bridge._last_smoke_popped = False
+            bus.bridge._last_emergency    = False
+            bus.bridge._last_ecu_smoke    = False
+            bus.bridge.update()
         self._refresh_all_panels()
         self._log("System reset — all devices returned to initial state.", "dim")
 

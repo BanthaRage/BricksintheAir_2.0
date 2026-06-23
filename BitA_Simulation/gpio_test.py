@@ -69,7 +69,11 @@ def pwm(h, gpio, duty):
 
 
 def stop(h, gpio):
-    lgpio.gpio_write(h, gpio, 0)
+    try:
+        lgpio.gpio_free(h, gpio)
+    except Exception:
+        pass
+    lgpio.gpio_claim_output(h, gpio, 0)
 
 
 def test_all_pins(h):
