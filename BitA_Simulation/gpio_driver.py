@@ -115,7 +115,7 @@ class GPIODriver:
 
         if _HW and self._ready and self._h is not None:
             for gpio in _ALL_GPIO:
-                lgpio.gpio_write(self._h, gpio, 0)
+                self._write(gpio, 0)   # cancel any active tx_pwm before closing
             lgpio.gpiochip_close(self._h)
             self._h = None
 
