@@ -56,7 +56,7 @@ class FCCDevice:
     EMERGENCY_STOP        = 0xE0
 
     _SET_COMMANDS        = frozenset({0x11, 0x21, 0x31, 0x41, 0x51, 0xB5})
-    SMOKE_DURATION_S     = 8.0      # fog active window per trigger
+    SMOKE_DURATION_S     = 15.0     # fog active window per trigger
     SMOKE_COOLDOWN_S     = 15.0     # minimum seconds between triggers (starts when fog ENDS)
     SMOKE_IDLE_PRESOAK_S = 1800.0   # 30 min idle → pre-soak warning
 
