@@ -28,7 +28,7 @@ DATA_NOT_RETRIEVED = 0xDA
 GEAR_EXTENDED      = 0x00
 GEAR_RETRACTED     = 0x01
 GEAR_IN_TRANSIT    = 0x02
-GEAR_TRANSIT_DELAY_S = 2.0
+GEAR_TRANSIT_DELAY_S = 2.5
 
 DC = 0x10  # Don't Change — used in set_led calls
 
