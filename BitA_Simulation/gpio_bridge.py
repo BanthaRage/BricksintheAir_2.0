@@ -135,9 +135,9 @@ class GPIOBridge:
             # GearDevice sets target via _transit_target — drive toward it
             target = getattr(self._bus.gear, '_transit_target', None)
             if target == GEAR_EXTENDED:
-                self._driver.gear_up(GEAR_DUTY)
-            elif target == GEAR_RETRACTED:
                 self._driver.gear_down(GEAR_DUTY)
+            elif target == GEAR_RETRACTED:
+                self._driver.gear_up(GEAR_DUTY)
             else:
                 log.warning("GEAR IN_TRANSIT but _transit_target unknown")
         elif pos == GEAR_EXTENDED:

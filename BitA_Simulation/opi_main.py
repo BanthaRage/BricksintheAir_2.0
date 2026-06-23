@@ -37,7 +37,7 @@ def build_bus() -> I2CBus:
 
     # Retract gear on startup — confirms GPIO pins are live
     print("Retracting landing gear...")
-    driver.gear_down(100.0)
+    driver.gear_up(100.0)
     time.sleep(GEAR_TRANSIT_DELAY_S)
     driver.gear_stop()
 
@@ -118,7 +118,7 @@ def main():
     finally:
         if bus.gear.gear_position != GEAR_RETRACTED:
             print("Parking landing gear...")
-            driver.gear_down(100.0)
+            driver.gear_up(100.0)
             time.sleep(GEAR_TRANSIT_DELAY_S)
         driver.cleanup()
 
