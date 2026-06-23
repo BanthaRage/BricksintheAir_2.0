@@ -17,7 +17,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from devices      import I2CBus, GEAR_EXTENDED, GEAR_TRANSIT_DELAY_S
+from devices      import I2CBus, GEAR_RETRACTED, GEAR_TRANSIT_DELAY_S
 from gpio_driver  import GPIODriver
 from gpio_bridge  import GPIOBridge, OVERSPEED_RUNON_S
 
@@ -34,6 +34,13 @@ def build_bus() -> I2CBus:
     bridge = GPIOBridge(bus, driver)
     bus.bridge = bridge
     bridge.update()   # sync initial device state (ECU speed 2 → propeller at 40%)
+
+    # Retract gear on startup — confirms GPIO pins are live
+    print("Retracting landing gear...")
+    driver.gear_up(100.0)
+    time.sleep(GEAR_TRANSIT_DELAY_S)
+    driver.gear_stop()
+
     return bus, driver
 
 
@@ -109,7 +116,7 @@ def main():
         else:
             run_repl(bus)
     finally:
-        if bus.gear.gear_position != GEAR_EXTENDED:
+        if bus.gear.gear_position != GEAR_RETRACTED:
             print("Parking landing gear...")
             driver.gear_up(100.0)
             time.sleep(GEAR_TRANSIT_DELAY_S)

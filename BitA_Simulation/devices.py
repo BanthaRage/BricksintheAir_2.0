@@ -395,7 +395,7 @@ class GearDevice:
     _SET_COMMANDS = frozenset({0x21, 0x31, 0x41})
 
     def __init__(self):
-        self.gear_position   = GEAR_EXTENDED
+        self.gear_position   = GEAR_RETRACTED
         self.operation_mode  = PRI_OPERATION_MODE
         self.maint_status    = MAINT_STATUS_DISABLED
         self._transit_start  = None
@@ -403,7 +403,7 @@ class GearDevice:
         self.rx_buffer       = []
         self.tx_buffer       = []
         self.notifications   = []
-        self._led            = (True, False, False)   # green=ON (extended) at startup
+        self._led            = (False, False, True)   # red=ON (retracted) at startup
 
     def _set_led(self, g, y, r):
         ng = self._led[0] if g == DC else bool(g)
