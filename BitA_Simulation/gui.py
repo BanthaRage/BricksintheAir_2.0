@@ -463,7 +463,7 @@ class App(tk.Tk):
         for note in notes:
             if note[0] == "smoke":
                 self._log(ENGINE_WARN1, "smoke")
-                self.after(2000, lambda: self._log(ENGINE_WARN2, "smoke"))
+                self.after(5000, lambda: self._log(ENGINE_WARN2, "smoke"))
                 # Delay WARN3 to match engine cutoff
                 self.after(int(_ENGINE_RUNON_S * 1000), lambda: self._log(ENGINE_WARN3, "smoke"))
                 # Auto-deploy AFSS if not already running

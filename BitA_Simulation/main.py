@@ -217,10 +217,10 @@ def execute_and_display(bus, line, engine_shutdown_delay=4.0):
 
     for _ in range(smoke_count):
         print(ENGINE_WARN1)
-        time.sleep(2)
+        time.sleep(5)
         print(ENGINE_WARN2)
         # Hold until engine_shutdown_delay so WARN3 prints when the motor cuts
-        time.sleep(max(0.0, engine_shutdown_delay - 2))
+        time.sleep(max(0.0, engine_shutdown_delay - 5))
         print(ENGINE_WARN3)
 
     if other_notes:
