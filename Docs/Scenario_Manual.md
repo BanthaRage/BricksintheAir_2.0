@@ -28,6 +28,11 @@ The engineers want to ensure that:
 
 You have been given access to the system via the **I2C protocol** with a set of allowed commands. Your job is to explore the system, gather information, and attempt to send both valid and invalid commands — all to validate the safety logic.
 
+This exercise is split into two parts:
+
+- **Part 1 — Warm-Up:** Practice I2C commands using the Landing Gear Control System before moving to the main scenario.
+- **Part 2 — Main Scenario:** Evaluate the Engine Control System and document any vulnerabilities.
+
 **Good Luck!**
 
 ---
@@ -73,7 +78,55 @@ READ: 0xAB ACK 0x01
 
 ---
 
-## Engine Control System (ECU)
+## Part 1: Warm-Up — Landing Gear Control System
+
+Before diving into the main scenario, you will practice I2C commands using the **Landing Gear Control System (GEAR)**. This system is simpler than the ECU but uses the same command format, response codes, and mode-escalation pattern you will need later.
+
+**7-bit address: 0x66 — Write: `0xCC` — Read: `0xCD`**
+
+| Command | Code | Payload | Response | Description |
+|---------|------|---------|----------|-------------|
+| Get Gear Position | `0x20` | — | `0x00` Extended | Get current gear position |
+| | | | `0x01` Retracted | |
+| | | | `0x02` In Transit | |
+| Set Gear Position | `0x21` | `0x00` Extend | `0x01` Accepted | Command gear to move |
+| | | `0x01` Retract | `0x01` Accepted | |
+| Get Mode of Operation | `0x30` | — | `0x00` Primary / `0x01` Secondary | Get current mode |
+| Set Mode of Operation | `0x31` | `0x00` Primary | `0x01` Accepted | Set operating mode |
+| | | `0x01` Secondary | `0x01` Accepted | |
+| Get Maintenance Status | `0x40` | — | `0x00` Normal / `0x01` Debug | Get maintenance status |
+| Set Maintenance Status | `0x41` | `0x00` Normal | `0x01` Accepted | Requires Secondary mode first |
+| | | `0x01` Debug | `0xDE` Rejected (Primary) | |
+
+### Warm-Up Exercises
+
+**Exercise 1: Read Current Gear Position**
+
+Send a command to the GEAR device to read the current gear position. Record the response.
+
+**Exercise 2: Extend the Landing Gear**
+
+Send a command to extend the landing gear. Watch the aircraft — the gear motor will run for approximately 2.5 seconds. After it stops, read the gear position again to confirm it changed.
+
+> While the gear is moving, reading the position will return `0x02` (In Transit).
+
+**Exercise 3: Retract the Landing Gear**
+
+Command the gear to retract. Confirm the position after the motor stops.
+
+**Exercise 4: Attempt Debug Mode in Primary**
+
+Attempt to enable Maintenance/Debug mode on the GEAR device while it is in Primary mode. Record the response.
+
+**Exercise 5: Escalate to Secondary and Enable Debug**
+
+Switch the GEAR device to Secondary mode, then attempt to enable Debug mode again. Record whether the behavior changes.
+
+> This two-step escalation pattern — **Primary → Secondary → Debug** — is the same mechanism used by the Engine Control System in the main scenario.
+
+---
+
+## Part 2: Main Scenario — Engine Control System (ECU)
 
 **7-bit address: 0x55 — Write: `0xAA` — Read: `0xAB`**
 
@@ -99,7 +152,7 @@ READ: 0xAB ACK 0x01
 
 ### Step 1: Read Current Engine Speed
 
-- Retrieve and record the current engine speed.
+- Record the current engine speed.
 
 ### Step 2: Test Valid Engine Speeds
 

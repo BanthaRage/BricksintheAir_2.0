@@ -9,13 +9,113 @@
 
 ## Initial System State
 
-When the simulation starts, the ECU is in the following state:
+| Device | Parameter | Value |
+|--------|-----------|-------|
+| GEAR | Gear Position | Retracted (0x01) |
+| GEAR | Mode of Operation | Primary (0x00) |
+| GEAR | Maintenance Status | Disabled (0x00) |
+| ECU | Engine Speed | Speed 2 (0x02) |
+| ECU | Mode of Operation | Primary (0x00) |
+| ECU | Maintenance Status | Disabled (0x00) |
 
-| Parameter | Value |
-|-----------|-------|
-| Engine Speed | 2 (Speed 2) |
-| Mode of Operation | Primary (0x00) |
-| Maintenance Status | Disabled (0x00) |
+---
+
+## Part 1: Warm-Up — Landing Gear Control System
+
+### Exercise 1: Read Current Gear Position
+
+**Command:**
+```
+[0xCC 0x20][0xCD r]
+```
+
+**Expected Response:**
+```
+READ: 0xCD ACK 0x01
+```
+
+**Answer:** Gear starts **Retracted** (`0x01`).
+
+---
+
+### Exercise 2: Extend the Landing Gear
+
+**Command:**
+```
+[0xCC 0x21 0x00][0xCD r]
+```
+
+**Expected Response:**
+```
+READ: 0xCD ACK 0x01
+```
+
+The gear motor runs for ~2.5 seconds. Reading position during transit:
+```
+[0xCC 0x20][0xCD r]  →  0x02  (In Transit)
+```
+
+After transit completes:
+```
+[0xCC 0x20][0xCD r]  →  0x00  (Extended)
+```
+
+---
+
+### Exercise 3: Retract the Landing Gear
+
+**Command:**
+```
+[0xCC 0x21 0x01][0xCD r]
+```
+
+**Expected Response:**
+```
+READ: 0xCD ACK 0x01
+```
+
+After transit (2.5 seconds):
+```
+[0xCC 0x20][0xCD r]  →  0x01  (Retracted)
+```
+
+---
+
+### Exercise 4: Attempt Debug Mode in Primary Mode
+
+**Command:**
+```
+[0xCC 0x41 0x01][0xCD r]
+```
+
+**Expected Response:**
+```
+READ: 0xCD ACK 0xDE
+```
+
+**Answer:** **Rejected.** The device must be in Secondary mode before Debug mode can be enabled. This is identical to the behavior participants will encounter in the ECU scenario.
+
+---
+
+### Exercise 5: Escalate to Secondary and Enable Debug
+
+Switch to Secondary mode:
+```
+[0xCC 0x31 0x01][0xCD r]  →  0x01  (Accepted)
+```
+
+Enable Debug mode:
+```
+[0xCC 0x41 0x01][0xCD r]  →  0x01  (Accepted)
+```
+
+**Answer:** **Accepted.** Once in Secondary mode, Debug mode is granted with no further authentication — the same vulnerability that exists in the ECU.
+
+> **Teaching point:** Participants should note that neither step required a password or credential. This two-step escalation without authentication is the core vulnerability they will exploit in Part 2.
+
+---
+
+## Part 2: Main Scenario — Engine Control System (ECU)
 
 ---
 
