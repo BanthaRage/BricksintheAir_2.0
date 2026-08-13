@@ -30,6 +30,10 @@ OVERSPEED_RUNON_S = 10.0
 # Gear motor duty — full power; timed stop is handled by GearDevice
 GEAR_DUTY = 100.0
 
+# Propeller ramp: duty step size and interval between steps
+RAMP_STEP_DUTY = 5.0   # % per step
+RAMP_STEP_S    = 0.05  # seconds between steps (~20 steps/sec, ~1s for full range)
+
 
 class GPIOBridge:
     """
@@ -61,6 +65,11 @@ class GPIOBridge:
         self._last_ecu_smoke    = False
         self._overspeed_cutoff  = None   # time.time() + OVERSPEED_RUNON_S on ECU overflow
 
+        # Propeller ramp state
+        self._current_prop_duty = 0.0
+        self._ramp_cancel       = threading.Event()
+        self._ramp_thread: threading.Thread | None = None
+
         # Background tick: expires smoke timers even with no I2C traffic
         threading.Thread(target=self._ticker, daemon=True, name="bridge-tick").start()
 
@@ -84,6 +93,8 @@ class GPIOBridge:
     def _sync_emergency(self):
         emergency = self._bus.fcc.emergency_stop
         if emergency and not self._last_emergency:
+            self._cancel_ramp()
+            self._current_prop_duty = 0.0
             self._driver.emergency_stop()
         if not emergency and self._last_emergency:
             # Coming out of emergency — force full re-sync on next tick
@@ -116,8 +127,41 @@ class GPIOBridge:
             return
 
         duty = SPEED_DUTY.get(speed, 0)
-        self._driver.set_propeller(duty)
+        self._start_ramp(duty)
         self._last_speed = speed
+
+    def _cancel_ramp(self):
+        self._ramp_cancel.set()
+        if self._ramp_thread and self._ramp_thread.is_alive():
+            self._ramp_thread.join(timeout=0.2)
+        self._ramp_cancel.clear()
+
+    def _start_ramp(self, target_duty: float):
+        self._cancel_ramp()
+        self._ramp_thread = threading.Thread(
+            target=self._ramp_propeller,
+            args=(target_duty,),
+            daemon=True,
+            name="prop-ramp",
+        )
+        self._ramp_thread.start()
+
+    def _ramp_propeller(self, target_duty: float):
+        current = self._current_prop_duty
+        if current == target_duty:
+            return
+        step = RAMP_STEP_DUTY if target_duty > current else -RAMP_STEP_DUTY
+        while not self._ramp_cancel.is_set():
+            current += step
+            if step > 0 and current >= target_duty:
+                current = target_duty
+            elif step < 0 and current <= target_duty:
+                current = target_duty
+            self._current_prop_duty = current
+            self._driver.set_propeller(current)
+            if current == target_duty:
+                break
+            self._ramp_cancel.wait(timeout=RAMP_STEP_S)
 
     # ------------------------------------------------------------------
     # Landing gear
