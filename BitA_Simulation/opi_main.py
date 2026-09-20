@@ -82,18 +82,22 @@ def run_repl(bus):
                 bus.ecu.ADDRESS:  bus.ecu,
                 bus.gear.ADDRESS: bus.gear,
             }
+            bus.bridge._cancel_ramp()
             bus.bridge._last_speed        = -1
             bus.bridge._last_gear         = -1
             bus.bridge._last_smoke_active = False
             bus.bridge._last_smoke_popped = False
             bus.bridge._last_emergency    = False
             bus.bridge._last_ecu_smoke    = False
+            bus.bridge._last_shutdown     = False
             bus.bridge._overspeed_cutoff  = None
             bus.bridge.update()
             print("System reset — all devices returned to initial state.")
         elif '[' in line:
             if bus.ecu.smoke_active:
                 print("WARNING: System in shutdown state — type 'system reset' to restore.")
+            elif bus.ecu.shutdown_active:
+                print("WARNING: Engine spool-down in progress — commands blocked until complete.")
             else:
                 m.execute_and_display(bus, line, engine_shutdown_delay=OVERSPEED_RUNON_S)
                 bus.bridge.update()

@@ -31,8 +31,9 @@ OVERSPEED_RUNON_S = 10.0
 GEAR_DUTY = 100.0
 
 # Propeller ramp: duty step size and interval between steps
-RAMP_STEP_DUTY = 5.0   # % per step
-RAMP_STEP_S    = 0.05  # seconds between steps (~20 steps/sec, ~1s for full range)
+RAMP_STEP_DUTY  = 5.0   # % per step (normal speed changes)
+RAMP_STEP_S     = 0.05  # seconds between steps (~20 steps/sec, ~1s for full range)
+SHUTDOWN_RAMP_S = 10.0  # total spool-down duration for a controlled Speed 0 shutdown
 
 
 class GPIOBridge:
@@ -69,6 +70,7 @@ class GPIOBridge:
         self._current_prop_duty = 0.0
         self._ramp_cancel       = threading.Event()
         self._ramp_thread: threading.Thread | None = None
+        self._last_shutdown     = False
 
         # Background tick: expires smoke timers even with no I2C traffic
         threading.Thread(target=self._ticker, daemon=True, name="bridge-tick").start()
@@ -101,6 +103,7 @@ class GPIOBridge:
             self._last_speed        = -1
             self._last_gear         = -1
             self._last_smoke_active = False
+            self._last_shutdown     = False
             self._overspeed_cutoff  = None
         self._last_emergency = emergency
 
@@ -123,6 +126,15 @@ class GPIOBridge:
         else:
             self._overspeed_cutoff = None
 
+        # Controlled shutdown: slow spool-down over SHUTDOWN_RAMP_S seconds
+        if ecu.shutdown_active and not self._last_shutdown:
+            self._last_shutdown = True
+            self._start_ramp(0.0, duration_s=SHUTDOWN_RAMP_S)
+            self._last_speed = 0
+            return
+        elif not ecu.shutdown_active:
+            self._last_shutdown = False
+
         if speed == self._last_speed:
             return
 
@@ -136,21 +148,26 @@ class GPIOBridge:
             self._ramp_thread.join(timeout=0.2)
         self._ramp_cancel.clear()
 
-    def _start_ramp(self, target_duty: float):
+    def _start_ramp(self, target_duty: float, duration_s: float = None):
         self._cancel_ramp()
         self._ramp_thread = threading.Thread(
             target=self._ramp_propeller,
-            args=(target_duty,),
+            args=(target_duty, duration_s),
             daemon=True,
             name="prop-ramp",
         )
         self._ramp_thread.start()
 
-    def _ramp_propeller(self, target_duty: float):
+    def _ramp_propeller(self, target_duty: float, duration_s: float = None):
         current = self._current_prop_duty
         if current == target_duty:
             return
-        step = RAMP_STEP_DUTY if target_duty > current else -RAMP_STEP_DUTY
+        if duration_s is not None:
+            # Spread the full change evenly over duration_s
+            n_steps = max(1, round(duration_s / RAMP_STEP_S))
+            step = (target_duty - current) / n_steps
+        else:
+            step = RAMP_STEP_DUTY if target_duty > current else -RAMP_STEP_DUTY
         while not self._ramp_cancel.is_set():
             current += step
             if step > 0 and current >= target_duty:

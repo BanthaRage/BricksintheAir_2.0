@@ -85,7 +85,7 @@ Bytes may be hex (`0xFF`) or decimal (`255`).
 
 ## ECU Engine Levels
 
-Engine speed is set via `SET_ENGINE_SPEED` (0x11). Normal mode restricts levels 2–4. Debug mode (requires Secondary mode first) allows 0–4. Payload ≥ 5 triggers an engine overload fault.
+Engine speed is set via `SET_ENGINE_SPEED` (0x11). Normal mode restricts levels 2–4. Maintenance mode (requires Secondary mode first) allows 0–4. Payload ≥ 5 triggers an engine overload fault.
 
 | Level | RPM | Airspeed | Gear Deploy Safe |
 |-------|-----|----------|-----------------|
@@ -99,7 +99,7 @@ Engine speed is set via `SET_ENGINE_SPEED` (0x11). Normal mode restricts levels 
 
 ## Maintenance Mode
 
-All three devices support a two-step unlock to enable Maintenance (Debug) mode:
+All three devices support a two-step unlock to enable Maintenance mode:
 
 1. Set device to **Secondary mode** — `SET_MODE_OF_OPERATION 0x01`
 2. Enable Maintenance — `SET_MAINT_STATUS 0x01`

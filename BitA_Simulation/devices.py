@@ -243,14 +243,15 @@ class ECUDevice:
     }
 
     def __init__(self):
-        self.engine_speed   = self.MOTOR_START_SPEED
-        self.operation_mode = PRI_OPERATION_MODE
-        self.maint_status   = MAINT_STATUS_DISABLED
-        self.smoke_active   = False
-        self.rx_buffer      = []
-        self.tx_buffer      = []
-        self.notifications  = []
-        self._led           = (True, False, False)
+        self.engine_speed    = self.MOTOR_START_SPEED
+        self.operation_mode  = PRI_OPERATION_MODE
+        self.maint_status    = MAINT_STATUS_DISABLED
+        self.smoke_active    = False
+        self.shutdown_active = False   # True during controlled spool-down to speed 0
+        self.rx_buffer       = []
+        self.tx_buffer       = []
+        self.notifications   = []
+        self._led            = (True, False, False)
 
     def _set_led(self, g, y, r):
         ng = self._led[0] if g == DC else bool(g)
@@ -271,12 +272,24 @@ class ECUDevice:
             self.rx_buffer.clear()
             # ECU is offline — only RESET is honoured; everything else is ignored
             if command == self.RESET:
-                self.smoke_active   = False
-                self.engine_speed   = self.MOTOR_START_SPEED
-                self.operation_mode = PRI_OPERATION_MODE
-                self.maint_status   = MAINT_STATUS_DISABLED
+                self.smoke_active    = False
+                self.shutdown_active = False
+                self.engine_speed    = self.MOTOR_START_SPEED
+                self.operation_mode  = PRI_OPERATION_MODE
+                self.maint_status    = MAINT_STATUS_DISABLED
                 self._set_led(0x01, 0x00, 0x00)
             return   # no tx_buffer response for any command while offline
+
+        if self.shutdown_active:
+            self.rx_buffer.clear()
+            # ECU locked during spool-down — only RESET is honoured
+            if command == self.RESET:
+                self.shutdown_active = False
+                self.engine_speed    = self.MOTOR_START_SPEED
+                self.operation_mode  = PRI_OPERATION_MODE
+                self.maint_status    = MAINT_STATUS_DISABLED
+                self._set_led(0x01, 0x00, 0x00)
+            return
 
         payload = self.rx_buffer.pop(0) if self.rx_buffer else 0xFF
         self.rx_buffer.clear()
@@ -292,7 +305,13 @@ class ECUDevice:
 
             elif command == self.SET_ENGINE_SPEED:
                 if self.maint_status == MAINT_STATUS_ENABLED:
-                    if 0 <= payload <= 4:
+                    if payload == 0:
+                        # Controlled shutdown — spool-down sequence, ECU locks until complete
+                        self.engine_speed    = 0
+                        self.shutdown_active = True
+                        self.tx_buffer.append(ACCEPTED_COMMAND)
+                        self.notifications.append(('shutdown',))
+                    elif 1 <= payload <= 4:
                         self.engine_speed = payload
                         self.tx_buffer.append(ACCEPTED_COMMAND)
                     elif payload > 4:
@@ -356,9 +375,10 @@ class ECUDevice:
             elif command == self.GET_MAINT_STATUS:
                 self.tx_buffer.append(self.maint_status)
             elif command == self.RESET:
-                self.engine_speed   = self.MOTOR_START_SPEED
-                self.operation_mode = PRI_OPERATION_MODE
-                self.maint_status   = MAINT_STATUS_DISABLED
+                self.shutdown_active = False
+                self.engine_speed    = self.MOTOR_START_SPEED
+                self.operation_mode  = PRI_OPERATION_MODE
+                self.maint_status    = MAINT_STATUS_DISABLED
                 self._set_led(0x01, 0x00, 0x00)
                 # Arduino code does not push a response byte for RESET on ECU
             else:

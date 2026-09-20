@@ -22,7 +22,9 @@ from devices import (
     PRI_OPERATION_MODE, MAINT_STATUS_DISABLED,
     GEAR_EXTENDED, GEAR_RETRACTED, GEAR_IN_TRANSIT, GEAR_TRANSIT_DELAY_S,
 )
-from main import parse_transactions, BANNER, HELP_TEXT, ENGINE_WARN1, ENGINE_WARN2, ENGINE_WARN3
+from main import (parse_transactions, BANNER, HELP_TEXT,
+                  ENGINE_WARN1, ENGINE_WARN2, ENGINE_WARN3,
+                  SHUTDOWN_MSG1, SHUTDOWN_MSG2, SHUTDOWN_MSG3, SHUTDOWN_MSG4, SHUTDOWN_MSG5)
 
 try:
     from gpio_bridge import OVERSPEED_RUNON_S as _ENGINE_RUNON_S
@@ -397,6 +399,8 @@ class App(tk.Tk):
         elif "[" in line:
             if self.bus.ecu.smoke_active:
                 self._log("WARNING: System in shutdown state — type 'system reset' to restore.", "warning")
+            elif self.bus.ecu.shutdown_active:
+                self._log("WARNING: Engine spool-down in progress — commands blocked until complete.", "warning")
             else:
                 self._execute(line)
         else:
@@ -413,12 +417,14 @@ class App(tk.Tk):
             bus.gear.ADDRESS: bus.gear,
         }
         if bus.bridge is not None:
+            bus.bridge._cancel_ramp()
             bus.bridge._last_speed        = -1
             bus.bridge._last_gear         = -1
             bus.bridge._last_smoke_active = False
             bus.bridge._last_smoke_popped = False
             bus.bridge._last_emergency    = False
             bus.bridge._last_ecu_smoke    = False
+            bus.bridge._last_shutdown     = False
             bus.bridge._overspeed_cutoff  = None
             bus.bridge.update()
         self._refresh_all_panels()
@@ -476,6 +482,12 @@ class App(tk.Tk):
                     fcc.smoke_active      = True
                     fcc._smoke_start_time = time.time()
                     self._refresh_safety()
+            elif note[0] == "shutdown":
+                self._log(SHUTDOWN_MSG1, "smoke")
+                self.after(2000,  lambda: self._log(SHUTDOWN_MSG2, "smoke"))
+                self.after(5000,  lambda: self._log(SHUTDOWN_MSG3, "smoke"))
+                self.after(8000,  lambda: self._log(SHUTDOWN_MSG4, "smoke"))
+                self.after(10000, self._complete_shutdown)
             elif note[0] == "gear":
                 self._log(f"[GEAR] {note[1]}", "gear")
             elif note[0] == "error":
@@ -483,6 +495,11 @@ class App(tk.Tk):
             elif note[0] == "warning":
                 self._log(f"WARNING: {note[1]}", "warning")
             # 'led' changes are reflected silently via _refresh_all_panels
+
+    def _complete_shutdown(self):
+        self._log(SHUTDOWN_MSG5, "smoke")
+        self.bus.ecu.shutdown_active = False
+        self._refresh_all_panels()
 
     # ── Output log ───────────────────────────────────────────────────────────
 

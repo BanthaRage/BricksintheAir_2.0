@@ -134,7 +134,7 @@ All speeds 1–4 are accepted in normal (Primary) mode.
 
 ---
 
-## Step 4: Attempt to Enter Debug Mode (Primary Mode)
+## Step 4: Attempt to Enter Maintenance Mode (Primary Mode)
 
 **Command:**
 ```
@@ -146,7 +146,7 @@ All speeds 1–4 are accepted in normal (Primary) mode.
 READ: 0xAB ACK 0xDE
 ```
 
-**Answer:** **Rejected.** The ECU requires Secondary mode before Debug mode can be enabled. This is the intended two-step unlock mechanism.
+**Answer:** **Rejected.** The ECU requires Secondary mode before Maintenance mode can be enabled. This is the intended two-step unlock mechanism.
 
 ---
 
@@ -174,7 +174,7 @@ Response: `0x01` (Secondary mode confirmed)
 
 ---
 
-## Step 6: Enter Debug Mode from Secondary Mode
+## Step 6: Enter Maintenance Mode from Secondary Mode
 
 **Command:**
 ```
@@ -186,35 +186,35 @@ Response: `0x01` (Secondary mode confirmed)
 READ: 0xAB ACK 0x01
 ```
 
-**Answer:** **Accepted.** Debug mode is now enabled.
+**Answer:** **Accepted.** Maintenance mode is now enabled.
 
 **Verify:**
 ```
 [0xAA 0x40][0xAB r]
 ```
-Response: `0x01` (Debug/Maintenance mode confirmed)
+Response: `0x01` (Maintenance mode confirmed)
 
 ---
 
-## Step 7: Retest Invalid Engine Speeds in Debug Mode
+## Step 7: Retest Invalid Engine Speeds in Maintenance Mode
 
 | Speed | Command | Expected Response | Result |
 |-------|---------|-------------------|--------|
 | Speed 0 | `[0xAA 0x11 0x00][0xAB r]` | `0x01` | **Accepted** |
 | Speed 5 | `[0xAA 0x11 0x05][0xAB r]` | `0xDA` | **Fault Detected** |
 
-**Speed 0:** In Debug mode, Speed 0 is no longer blocked. The flight safety restriction has been bypassed — the engine can now be commanded off.
+**Speed 0:** In Maintenance mode, Speed 0 is no longer blocked. The flight safety restriction has been bypassed — the engine can now be commanded off.
 
-**Speed 5:** Still triggers a fault even in Debug mode. This is not a bypass-able restriction.
+**Speed 5:** Still triggers a fault even in Maintenance mode. This is not a bypass-able restriction.
 
 > **This is the critical vulnerability.** An attacker who can reach the I2C bus can:
 > 1. Switch to Secondary mode (no credentials required)
-> 2. Enable Debug mode (no credentials required)
+> 2. Enable Maintenance mode (no credentials required)
 > 3. Command Speed 0 — shutting down the engine mid-flight
 
 ---
 
-## Step 8: Simulate Malicious Behavior (Speed 5 in Debug Mode)
+## Step 8: Simulate Malicious Behavior (Speed 5 in Maintenance Mode)
 
 **Command:**
 ```
@@ -226,7 +226,7 @@ Response: `0x01` (Debug/Maintenance mode confirmed)
 READ: 0xAB ACK 0xDA
 ```
 
-**Answer:** **Fault Detected** — even in Debug mode, Speed 5 triggers an unrecoverable engine fault.
+**Answer:** **Fault Detected** — even in Maintenance mode, Speed 5 triggers an unrecoverable engine fault.
 
 Physical effects on the aircraft:
 - Engine warning messages print to the terminal: `*** ENGINE OVERHEATING ***`, `*** ENGINE DAMAGE DETECTED ***`, `*** SHUT DOWN INITIATED ***`
@@ -241,8 +241,8 @@ Physical effects on the aircraft:
 
 | # | Vulnerability | Severity | Details |
 |---|--------------|----------|---------|
-| 1 | **No authentication for mode escalation** | Critical | Any I2C device can switch to Secondary mode and enable Debug mode without credentials |
-| 2 | **Debug mode bypasses the speed range restriction** | Critical | Speed 0 (engine off) becomes accepted — enables malicious mid-flight engine cutoff |
+| 1 | **No authentication for mode escalation** | Critical | Any I2C device can switch to Secondary mode and enable Maintenance mode without credentials |
+| 2 | **Maintenance mode bypasses the speed range restriction** | Critical | Speed 0 (engine off) becomes accepted — enables malicious mid-flight engine cutoff |
 | 3 | **Overspeed fault is destructive and unrecoverable** | High | Speed 5 takes the ECU offline regardless of mode; requires full system reset to recover |
 
 ---
@@ -253,19 +253,19 @@ Physical effects on the aircraft:
 
 - Normal mode enforces the 1–4 speed range — both Speed 0 and Speed 5+ are correctly blocked
 - Fault detection for overspeed (Speed 5) prevents uncontrolled over-rev in any mode
-- Two-step unlock (Secondary → Debug) adds one layer of friction against casual access
+- Two-step unlock (Secondary → Maintenance) adds one layer of friction against casual access
 
 ### Weaknesses
 
 - Mode escalation requires zero authentication — any I2C master can escalate
-- Debug mode removes the 1–4 speed range restriction, allowing Speed 0 (engine off)
+- Maintenance mode removes the 1–4 speed range restriction, allowing Speed 0 (engine off)
 - No rate limiting or audit logging on I2C commands
 - No mutual authentication between I2C master and device
 
 ### Recommendations
 
 - Require cryptographic authentication (e.g., challenge-response) before accepting mode changes
-- Enforce the 1–4 speed range restriction in Debug mode as well, or restrict debug access to ground operations only
-- Physically isolate the debug interface (maintenance-only terminal, not the shared flight bus)
+- Enforce the 1–4 speed range restriction in Maintenance mode as well, or restrict maintenance access to ground operations only
+- Physically isolate the maintenance interface (not the shared flight bus)
 - Add command rate limiting to detect and reject command floods
 - Log all I2C transactions to a tamper-evident store

@@ -64,13 +64,19 @@ Special commands
 
 ENGINE_WARN1 = """\
   *** ENGINE OVERHEATING ***
-"""       
+"""
 ENGINE_WARN2 = """\
   *** ENGINE DAMAGE DETECTED ***
 """
 ENGINE_WARN3 = """\
   *** SHUT DOWN INITIATED ***
 """
+
+SHUTDOWN_MSG1 = "  *** ENGINE SHUTDOWN INITIATED ***\n  Controlled spool-down in progress..."
+SHUTDOWN_MSG2 = "  Engine spooling down...  RPM decreasing"
+SHUTDOWN_MSG3 = "  Engine spooling down...  50% thrust remaining"
+SHUTDOWN_MSG4 = "  Engine spooling down...  minimal thrust"
+SHUTDOWN_MSG5 = "  *** ENGINE OFFLINE ***\n  Shutdown complete."
 
 
 # ---------------------------------------------------------------------------
@@ -212,8 +218,9 @@ def execute_and_display(bus, line, engine_shutdown_delay=4.0):
         print(out)
 
     notes = bus.drain_notifications()
-    smoke_count = sum(1 for n in notes if n[0] == 'smoke')
-    other_notes = [n for n in notes if n[0] != 'smoke']
+    smoke_count    = sum(1 for n in notes if n[0] == 'smoke')
+    shutdown_count = sum(1 for n in notes if n[0] == 'shutdown')
+    other_notes    = [n for n in notes if n[0] not in ('smoke', 'shutdown')]
 
     for _ in range(smoke_count):
         print(ENGINE_WARN1)
@@ -222,6 +229,18 @@ def execute_and_display(bus, line, engine_shutdown_delay=4.0):
         # Hold until engine_shutdown_delay so WARN3 prints when the motor cuts
         time.sleep(max(0.0, engine_shutdown_delay - 5))
         print(ENGINE_WARN3)
+
+    for _ in range(shutdown_count):
+        print(SHUTDOWN_MSG1)
+        time.sleep(2)
+        print(SHUTDOWN_MSG2)
+        time.sleep(3)
+        print(SHUTDOWN_MSG3)
+        time.sleep(3)
+        print(SHUTDOWN_MSG4)
+        time.sleep(2)
+        print(SHUTDOWN_MSG5)
+        bus.ecu.shutdown_active = False
 
     if other_notes:
         print(_format_notifications(other_notes, bus))

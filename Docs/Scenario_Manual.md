@@ -23,7 +23,7 @@ The engineers want to ensure that:
 
 - Speed 0 (engine off) is **rejected** while the system is in normal operating mode.
 - Valid speed commands (Speeds 1–4) are **accepted** during flight.
-- Debug/Maintenance mode cannot be accessed without proper escalation.
+- Maintenance mode cannot be accessed without proper escalation.
 - No other threats to the system exist.
 
 You have been given access to the system via the **I2C protocol** with a set of allowed commands. Your job is to explore the system, gather information, and attempt to send both valid and invalid commands — all to validate the safety logic.
@@ -94,9 +94,9 @@ Before diving into the main scenario, you will practice I2C commands using the *
 | Get Mode of Operation | `0x30` | — | `0x00` Primary / `0x01` Secondary | Get current mode |
 | Set Mode of Operation | `0x31` | `0x00` Primary | `0x01` Accepted | Set operating mode |
 | | | `0x01` Secondary | `0x01` Accepted | |
-| Get Maintenance Status | `0x40` | — | `0x00` Normal / `0x01` Debug | Get maintenance status |
+| Get Maintenance Status | `0x40` | — | `0x00` Normal / `0x01` Maintenance | Get maintenance status |
 | Set Maintenance Status | `0x41` | `0x00` Normal | `0x01` Accepted | Requires Secondary mode first |
-| | | `0x01` Debug | `0xDE` Rejected (Primary) | |
+| | | `0x01` Maintenance | `0xDE` Rejected (Primary) | |
 
 ### Warm-Up Exercises
 
@@ -114,15 +114,15 @@ Send a command to extend the landing gear. Watch the aircraft — the gear motor
 
 Command the gear to retract. Confirm the position after the motor stops.
 
-**Exercise 4: Attempt Debug Mode in Primary**
+**Exercise 4: Attempt Maintenance Mode in Primary**
 
-Attempt to enable Maintenance/Debug mode on the GEAR device while it is in Primary mode. Record the response.
+Attempt to enable Maintenance mode on the GEAR device while it is in Primary mode. Record the response.
 
-**Exercise 5: Escalate to Secondary and Enable Debug**
+**Exercise 5: Escalate to Secondary and Enable Maintenance Mode**
 
-Switch the GEAR device to Secondary mode, then attempt to enable Debug mode again. Record whether the behavior changes.
+Switch the GEAR device to Secondary mode, then attempt to enable Maintenance mode again. Record whether the behavior changes.
 
-> This two-step escalation pattern — **Primary → Secondary → Debug** — is the same mechanism used by the Engine Control System in the main scenario.
+> This two-step escalation pattern — **Primary → Secondary → Maintenance** — is the same mechanism used by the Engine Control System in the main scenario.
 
 ---
 
@@ -142,9 +142,9 @@ Switch the GEAR device to Secondary mode, then attempt to enable Debug mode agai
 | Get Mode of Operation | `0x30` | — | `0x00` Primary / `0x01` Secondary | Get the current mode |
 | Set Mode of Operation | `0x31` | `0x00` Primary | `0x01` Accepted | Set operating mode |
 | | | `0x01` Secondary | `0x01` Accepted | |
-| Get Maintenance Status | `0x40` | — | `0x00` Normal / `0x01` Debug | Get maintenance status |
+| Get Maintenance Status | `0x40` | — | `0x00` Normal / `0x01` Maintenance | Get maintenance status |
 | Set Maintenance Status | `0x41` | `0x00` Normal | `0x01` Accepted | Used for maintenance and troubleshooting. |
-| | | `0x01` Debug | `0x01` Accepted | **Requires Secondary mode first.** |
+| | | `0x01` Maintenance | `0x01` Accepted | **Requires Secondary mode first.** |
 
 ---
 
@@ -168,9 +168,9 @@ Switch the GEAR device to Secondary mode, then attempt to enable Debug mode agai
 - Attempt to set engine speed to Speed 5.
 - Record whether each attempt is accepted or rejected.
 
-### Step 4: Attempt to Enter Debug Mode
+### Step 4: Attempt to Enter Maintenance Mode
 
-- While in Primary mode, attempt to enable Maintenance/Debug mode.
+- While in Primary mode, attempt to enable Maintenance mode.
 - Observe and record whether the system accepts or rejects the request.
 
 ### Step 5: Switch to Secondary Mode
@@ -178,14 +178,14 @@ Switch the GEAR device to Secondary mode, then attempt to enable Debug mode agai
 - Change the ECU to Secondary mode.
 - Confirm the mode change was accepted.
 
-### Step 6: Enter Debug Mode from Secondary Mode
+### Step 6: Enter Maintenance Mode from Secondary Mode
 
-- With the system now in Secondary mode, attempt to enable Debug mode again.
+- With the system now in Secondary mode, attempt to enable Maintenance mode again.
 - Record the system's response and any differences in behavior.
 
-### Step 7: Retest Speed 0 in Debug Mode
+### Step 7: Retest Speed 0 in Maintenance Mode
 
-- While in Debug mode, retry Speed 0 (engine off).
+- While in Maintenance mode, retry Speed 0 (engine off).
 - Record whether it is now accepted.
 - Note any differences in enforcement or system response.
 
@@ -199,7 +199,7 @@ Switch the GEAR device to Secondary mode, then attempt to enable Debug mode agai
 
 Identify:
 - Any speeds accepted that should be rejected
-- Any unauthorized access to Debug mode
+- Any unauthorized access to Maintenance mode
 - Any bypasses of safety restrictions
 
 Analyze how these could be exploited in a real-world scenario.
@@ -209,4 +209,4 @@ Analyze how these could be exploited in a real-world scenario.
 Your report should include:
 - System strengths and weaknesses
 - Any critical risks discovered
-- Suggestions for securing the ECS (e.g., enforcing privilege checks, isolating debug access, adding authentication)
+- Suggestions for securing the ECS (e.g., enforcing privilege checks, isolating maintenance access, adding authentication)
