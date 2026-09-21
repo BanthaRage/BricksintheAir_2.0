@@ -78,6 +78,12 @@ SHUTDOWN_MSG3 = "  Engine spooling down...  50% thrust remaining"
 SHUTDOWN_MSG4 = "  Engine spooling down...  minimal thrust"
 SHUTDOWN_MSG5 = "  *** ENGINE OFFLINE ***\n  Shutdown complete."
 
+STARTUP_MSG1 = "  *** ENGINE START SEQUENCE INITIATED ***\n  Controlled spool-up in progress..."
+STARTUP_MSG2 = "  Engine spooling up...  ignition confirmed"
+STARTUP_MSG3 = "  Engine spooling up...  building thrust"
+STARTUP_MSG4 = "  Engine spooling up...  approaching target speed"
+STARTUP_MSG5 = "  *** ENGINE ONLINE ***\n  Startup complete."
+
 
 # ---------------------------------------------------------------------------
 # Parsing
@@ -220,7 +226,8 @@ def execute_and_display(bus, line, engine_shutdown_delay=4.0):
     notes = bus.drain_notifications()
     smoke_count    = sum(1 for n in notes if n[0] == 'smoke')
     shutdown_count = sum(1 for n in notes if n[0] == 'shutdown')
-    other_notes    = [n for n in notes if n[0] not in ('smoke', 'shutdown')]
+    startup_count  = sum(1 for n in notes if n[0] == 'startup')
+    other_notes    = [n for n in notes if n[0] not in ('smoke', 'shutdown', 'startup')]
 
     for _ in range(smoke_count):
         print(ENGINE_WARN1)
@@ -241,6 +248,18 @@ def execute_and_display(bus, line, engine_shutdown_delay=4.0):
         time.sleep(2)
         print(SHUTDOWN_MSG5)
         bus.ecu.shutdown_active = False
+
+    for _ in range(startup_count):
+        print(STARTUP_MSG1)
+        time.sleep(2)
+        print(STARTUP_MSG2)
+        time.sleep(3)
+        print(STARTUP_MSG3)
+        time.sleep(3)
+        print(STARTUP_MSG4)
+        time.sleep(2)
+        print(STARTUP_MSG5)
+        bus.ecu.startup_active = False
 
     if other_notes:
         print(_format_notifications(other_notes, bus))

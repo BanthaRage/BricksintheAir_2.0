@@ -24,7 +24,8 @@ from devices import (
 )
 from main import (parse_transactions, BANNER, HELP_TEXT,
                   ENGINE_WARN1, ENGINE_WARN2, ENGINE_WARN3,
-                  SHUTDOWN_MSG1, SHUTDOWN_MSG2, SHUTDOWN_MSG3, SHUTDOWN_MSG4, SHUTDOWN_MSG5)
+                  SHUTDOWN_MSG1, SHUTDOWN_MSG2, SHUTDOWN_MSG3, SHUTDOWN_MSG4, SHUTDOWN_MSG5,
+                  STARTUP_MSG1, STARTUP_MSG2, STARTUP_MSG3, STARTUP_MSG4, STARTUP_MSG5)
 
 try:
     from gpio_bridge import OVERSPEED_RUNON_S as _ENGINE_RUNON_S
@@ -401,6 +402,8 @@ class App(tk.Tk):
                 self._log("WARNING: System in shutdown state — type 'system reset' to restore.", "warning")
             elif self.bus.ecu.shutdown_active:
                 self._log("WARNING: Engine spool-down in progress — commands blocked until complete.", "warning")
+            elif self.bus.ecu.startup_active:
+                self._log("WARNING: Engine spool-up in progress — commands blocked until complete.", "warning")
             else:
                 self._execute(line)
         else:
@@ -425,6 +428,7 @@ class App(tk.Tk):
             bus.bridge._last_emergency    = False
             bus.bridge._last_ecu_smoke    = False
             bus.bridge._last_shutdown     = False
+            bus.bridge._last_startup      = False
             bus.bridge._overspeed_cutoff  = None
             bus.bridge.update()
         self._refresh_all_panels()
@@ -488,6 +492,12 @@ class App(tk.Tk):
                 self.after(5000,  lambda: self._log(SHUTDOWN_MSG3, "smoke"))
                 self.after(8000,  lambda: self._log(SHUTDOWN_MSG4, "smoke"))
                 self.after(10000, self._complete_shutdown)
+            elif note[0] == "startup":
+                self._log(STARTUP_MSG1, "smoke")
+                self.after(2000,  lambda: self._log(STARTUP_MSG2, "smoke"))
+                self.after(5000,  lambda: self._log(STARTUP_MSG3, "smoke"))
+                self.after(8000,  lambda: self._log(STARTUP_MSG4, "smoke"))
+                self.after(10000, self._complete_startup)
             elif note[0] == "gear":
                 self._log(f"[GEAR] {note[1]}", "gear")
             elif note[0] == "error":
@@ -499,6 +509,11 @@ class App(tk.Tk):
     def _complete_shutdown(self):
         self._log(SHUTDOWN_MSG5, "smoke")
         self.bus.ecu.shutdown_active = False
+        self._refresh_all_panels()
+
+    def _complete_startup(self):
+        self._log(STARTUP_MSG5, "smoke")
+        self.bus.ecu.startup_active = False
         self._refresh_all_panels()
 
     # ── Output log ───────────────────────────────────────────────────────────

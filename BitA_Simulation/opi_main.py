@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from devices      import I2CBus, GEAR_EXTENDED, GEAR_RETRACTED, GEAR_TRANSIT_DELAY_S
 from gpio_driver  import GPIODriver
-from gpio_bridge  import GPIOBridge, OVERSPEED_RUNON_S
+from gpio_bridge  import GPIOBridge, OVERSPEED_RUNON_S, read_gear_state
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,17 +33,21 @@ def build_bus() -> I2CBus:
     bus    = I2CBus()
     bridge = GPIOBridge(bus, driver)
     bus.bridge = bridge
-    bridge.update()   # sync initial device state (ECU speed 2 → propeller at 40%)
+    # Restore gear position from last known state
+    saved = read_gear_state()
+    if saved == 'EXTENDED':
+        bus.gear.gear_position = GEAR_EXTENDED
+        bus.gear._led          = (True, False, False)   # green = extended
+        print("Gear state restored: EXTENDED")
+    else:
+        bus.gear.gear_position = GEAR_RETRACTED
+        bus.gear._led          = (False, False, True)   # red = retracted
+        if saved == 'RETRACTED':
+            print("Gear state restored: RETRACTED")
+        else:
+            print("No saved gear state — defaulting to RETRACTED")
 
-    # Extend then retract on startup — GPIO test, always starts from a known state
-    print("Extending landing gear...")
-    driver.gear_down(100.0)
-    time.sleep(GEAR_TRANSIT_DELAY_S)
-    driver.gear_stop()
-    print("Retracting landing gear...")
-    driver.gear_up(100.0)
-    time.sleep(GEAR_TRANSIT_DELAY_S)
-    driver.gear_stop()
+    bridge.update()   # sync initial device state to GPIO
 
     return bus, driver
 
@@ -90,6 +94,7 @@ def run_repl(bus):
             bus.bridge._last_emergency    = False
             bus.bridge._last_ecu_smoke    = False
             bus.bridge._last_shutdown     = False
+            bus.bridge._last_startup      = False
             bus.bridge._overspeed_cutoff  = None
             bus.bridge.update()
             print("System reset — all devices returned to initial state.")
@@ -98,6 +103,8 @@ def run_repl(bus):
                 print("WARNING: System in shutdown state — type 'system reset' to restore.")
             elif bus.ecu.shutdown_active:
                 print("WARNING: Engine spool-down in progress — commands blocked until complete.")
+            elif bus.ecu.startup_active:
+                print("WARNING: Engine spool-up in progress — commands blocked until complete.")
             else:
                 m.execute_and_display(bus, line, engine_shutdown_delay=OVERSPEED_RUNON_S)
                 bus.bridge.update()

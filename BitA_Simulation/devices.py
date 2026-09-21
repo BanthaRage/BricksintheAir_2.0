@@ -248,6 +248,7 @@ class ECUDevice:
         self.maint_status    = MAINT_STATUS_DISABLED
         self.smoke_active    = False
         self.shutdown_active = False   # True during controlled spool-down to speed 0
+        self.startup_active  = False   # True during controlled spool-up from speed 0
         self.rx_buffer       = []
         self.tx_buffer       = []
         self.notifications   = []
@@ -285,6 +286,19 @@ class ECUDevice:
             # ECU locked during spool-down — only RESET is honoured
             if command == self.RESET:
                 self.shutdown_active = False
+                self.startup_active  = False
+                self.engine_speed    = self.MOTOR_START_SPEED
+                self.operation_mode  = PRI_OPERATION_MODE
+                self.maint_status    = MAINT_STATUS_DISABLED
+                self._set_led(0x01, 0x00, 0x00)
+            return
+
+        if self.startup_active:
+            self.rx_buffer.clear()
+            # ECU locked during spool-up — only RESET is honoured
+            if command == self.RESET:
+                self.startup_active  = False
+                self.shutdown_active = False
                 self.engine_speed    = self.MOTOR_START_SPEED
                 self.operation_mode  = PRI_OPERATION_MODE
                 self.maint_status    = MAINT_STATUS_DISABLED
@@ -312,8 +326,15 @@ class ECUDevice:
                         self.tx_buffer.append(ACCEPTED_COMMAND)
                         self.notifications.append(('shutdown',))
                     elif 1 <= payload <= 4:
-                        self.engine_speed = payload
-                        self.tx_buffer.append(ACCEPTED_COMMAND)
+                        if self.engine_speed == 0:
+                            # Spool-up from stopped — mirror of the shutdown sequence
+                            self.engine_speed   = payload
+                            self.startup_active = True
+                            self.tx_buffer.append(ACCEPTED_COMMAND)
+                            self.notifications.append(('startup',))
+                        else:
+                            self.engine_speed = payload
+                            self.tx_buffer.append(ACCEPTED_COMMAND)
                     elif payload > 4:
                         # Overflow — fault detected, trigger smoke, go offline
                         self.engine_speed = 0
@@ -376,6 +397,7 @@ class ECUDevice:
                 self.tx_buffer.append(self.maint_status)
             elif command == self.RESET:
                 self.shutdown_active = False
+                self.startup_active  = False
                 self.engine_speed    = self.MOTOR_START_SPEED
                 self.operation_mode  = PRI_OPERATION_MODE
                 self.maint_status    = MAINT_STATUS_DISABLED

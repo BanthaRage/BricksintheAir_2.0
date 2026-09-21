@@ -10,6 +10,7 @@ Engine speed → propeller duty:
 """
 
 import logging
+import os
 import threading
 import time
 
@@ -20,6 +21,27 @@ from devices import (
 from gpio_driver import FOG_PREHEAT_S
 
 log = logging.getLogger(__name__)
+
+GEAR_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gear_state.txt')
+
+def _write_gear_state(position_name: str):
+    try:
+        with open(GEAR_STATE_FILE, 'w') as f:
+            f.write(position_name)
+        log.debug("Gear state saved: %s", position_name)
+    except OSError as e:
+        log.warning("Could not write gear state file: %s", e)
+
+def read_gear_state() -> str | None:
+    """Return 'EXTENDED' or 'RETRACTED' from the saved state file, or None if unavailable."""
+    try:
+        with open(GEAR_STATE_FILE, 'r') as f:
+            value = f.read().strip().upper()
+        if value in ('EXTENDED', 'RETRACTED'):
+            return value
+    except OSError:
+        pass
+    return None
 
 # Engine level → propeller PWM duty (%)
 SPEED_DUTY = {0: 0, 1: 35, 2: 50, 3: 65, 4: 80, 5: 100}
@@ -34,6 +56,7 @@ GEAR_DUTY = 100.0
 RAMP_STEP_DUTY  = 5.0   # % per step (normal speed changes)
 RAMP_STEP_S     = 0.05  # seconds between steps (~20 steps/sec, ~1s for full range)
 SHUTDOWN_RAMP_S = 10.0  # total spool-down duration for a controlled Speed 0 shutdown
+STARTUP_RAMP_S  = 10.0  # total spool-up duration when starting from Speed 0
 
 
 class GPIOBridge:
@@ -71,6 +94,7 @@ class GPIOBridge:
         self._ramp_cancel       = threading.Event()
         self._ramp_thread: threading.Thread | None = None
         self._last_shutdown     = False
+        self._last_startup      = False
 
         # Background tick: expires smoke timers even with no I2C traffic
         threading.Thread(target=self._ticker, daemon=True, name="bridge-tick").start()
@@ -104,6 +128,7 @@ class GPIOBridge:
             self._last_gear         = -1
             self._last_smoke_active = False
             self._last_shutdown     = False
+            self._last_startup      = False
             self._overspeed_cutoff  = None
         self._last_emergency = emergency
 
@@ -134,6 +159,16 @@ class GPIOBridge:
             return
         elif not ecu.shutdown_active:
             self._last_shutdown = False
+
+        # Controlled startup: slow spool-up over STARTUP_RAMP_S seconds
+        if ecu.startup_active and not self._last_startup:
+            self._last_startup = True
+            duty = SPEED_DUTY.get(ecu.engine_speed, 0)
+            self._start_ramp(duty, duration_s=STARTUP_RAMP_S)
+            self._last_speed = ecu.engine_speed
+            return
+        elif not ecu.startup_active:
+            self._last_startup = False
 
         if speed == self._last_speed:
             return
@@ -203,8 +238,10 @@ class GPIOBridge:
                 log.warning("GEAR IN_TRANSIT but _transit_target unknown")
         elif pos == GEAR_EXTENDED:
             self._driver.gear_stop()
+            _write_gear_state('EXTENDED')
         elif pos == GEAR_RETRACTED:
             self._driver.gear_stop()
+            _write_gear_state('RETRACTED')
 
         self._last_gear = pos
 
